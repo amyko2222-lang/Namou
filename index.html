@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LaoLearn Pro - 终极清爽版</title>
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <style>
+        :root { 
+            --primary: #007aff; --success: #34c759; --danger: #ff3b30; 
+            --bg-color: #f2f2f7; --card-bg: #ffffff; --text-main: #1c1c1e; --text-sub: #8e8e93;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-color); margin: 0; padding-bottom: 90px; color: var(--text-main); -webkit-tap-highlight-color: transparent; }
+        
+        /* 底部导航栏 */
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); display: flex; border-top: 1px solid #e5e5ea; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        .tab-item { flex: 1; text-align: center; padding: 12px 0; font-size: 11px; color: var(--text-sub); cursor: pointer; border: none; background: none; transition: color 0.2s; }
+        .tab-item.active { color: var(--primary); font-weight: 500; }
+        .tab-item i { display: block; font-size: 24px; margin-bottom: 3px; font-style: normal; }
+
+        .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 全局卡片风格 */
+        .panel { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 16px; }
+
+        /* 搜索与词典 */
+        .search-box { width: 100%; padding: 14px 18px; border: none; border-radius: 14px; background: var(--card-bg); box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 16px; box-sizing: border-box; outline: none; margin-bottom: 20px; color: var(--text-main); }
+        .dict-title { text-align: center; font-size: 28px; font-weight: bold; color: var(--primary); margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,122,255,0.1); }
+        .dict-item { background: var(--card-bg); padding: 16px 20px; border-radius: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        
+        /* 背诵页顶部装饰 */
+        .study-top-panel { background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(240,248,255,0.9)); border: 1px solid rgba(0,122,255,0.18); border-radius: 24px; padding: 18px 18px 16px; box-shadow: 0 16px 40px rgba(0,122,255,0.08); margin-bottom: 20px; }
+        .study-header { text-align: center; margin-bottom: 12px; }
+        .study-label { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: rgba(0,122,255,0.14); color: var(--primary); font-size: 16px; font-weight: 700; }
+        .study-header small { display: block; margin-top: 8px; color: var(--text-sub); font-size: 14px; }
+        .progress-track { background: #e5e5ea; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+        #progressBar { height: 100%; background: linear-gradient(90deg, #007aff, #34c759); width: 0%; transition: width 0.4s ease; border-radius: 999px; }
+
+        /* 分类过滤器 */
+        .cat-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .cat-scroll::-webkit-scrollbar { display: none; }
+        .cat-btn { padding: 10px 16px; border-radius: 20px; background: var(--card-bg); border: 1px solid #e5e5ea; font-size: 13px; color: var(--text-sub); white-space: nowrap; cursor: pointer; transition: 0.2s ease; }
+        .cat-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 500; }
+
+        /* 背诵翻转卡片 */
+        .flashcard-wrapper { perspective: 1000px; height: 320px; margin: 0 auto 24px; max-width: 430px; }
+        .flashcard { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4,0.2,0.2,1); transform-style: preserve-3d; cursor: pointer; }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%); box-shadow: 0 18px 38px rgba(0,0,0,0.08); padding: 24px; box-sizing: border-box; }
+        .card-back { transform: rotateY(180deg); background: linear-gradient(180deg, #fbfdff 0%, #e8f1ff 100%); border: 1px solid rgba(0,122,255,0.14); }
+
+        /* 卡片字体设计 */
+        .word-lao-main { font-size: 42px; font-weight: 800; color: var(--primary); margin-bottom: 12px; text-align: center; line-height: 1.05; }
+        .word-lao-sub { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 18px; opacity: 0.88; text-align: center; }
+        .word-zh { font-size: 28px; line-height: 1.3; font-weight: 600; color: var(--text-main); text-align: center; }
+        rt { font-size: 14px; color: var(--text-sub); }
+        .cat-badge { position: absolute; top: 18px; left: 18px; padding: 6px 12px; border-radius: 999px; background: rgba(0,122,255,0.1); color: var(--primary); font-size: 12px; font-weight: 600; }
+        .hint-text { position: absolute; bottom: 18px; font-size: 13px; color: var(--text-sub); }
+
+        /* 底部操作按钮 */
+        .action-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+        .btn { min-height: 52px; border-radius: 18px; padding: 14px; font-size: 15px; }
+        .btn-know { background: var(--success); color: white; box-shadow: 0 10px 24px rgba(52,199,89,0.18); }
+        .btn-dont { background: var(--card-bg); color: var(--danger); border: 1px solid rgba(255,59,48,0.18); }
+        .btn-normal { background: #e5e5ea; color: var(--text-main); }
+
+        /* 管理页表单 */
+        input[type="text"], select { width: 100%; padding: 14px; border: 1px solid #e5e5ea; border-radius: 12px; margin-bottom: 12px; font-size: 15px; box-sizing: border-box; outline: none; background: #fafafa; }
+        input[type="text"]:focus, select:focus { border-color: var(--primary); background: #fff; }
+        
+        /* 数据统计面板 */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .stat-box { background: var(--card-bg); padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .stat-num { font-size: 28px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="page-dict" class="page active">
+        <div class="dict-title">老挝语小词典</div>
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜索老挝语、中文..." oninput="renderDict()">
+        <div id="dictContent"></div>
+    </div>
+
+    <div id="page-study" class="page">
+        <div class="study-top-panel">
+            <div class="study-header">
+                <div class="study-label">🧠 记忆卡片</div>
+                <small>轻触卡片翻转，配合分类更好记。</small>
+            </div>
+            <div class="progress-track"><div id="progressBar"></div></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:13px; color:var(--text-sub);">
+                <span>当前进度</span>
+                <strong id="progressText" style="color:var(--primary);">0/0</strong>
+            </div>
+        </div>
+
+        <div class="cat-scroll">
+            <button class="cat-btn active" onclick="setCat('全部', this)">全部词汇</button>
+            <button class="cat-btn" onclick="setCat('生活', this)">🏠 生活</button>
+            <button class="cat-btn" onclick="setCat('工作', this)">💼 工作</button>
+            <button class="cat-btn" onclick="setCat('文化', this)">⛩️ 文化</button>
+            <button class="cat-btn" onclick="setCat('错题', this)" style="color:var(--danger); border-color:#ffcccb;">🚩 错题本</button>
+        </div>
+
+        <div class="flashcard-wrapper">
+            <div id="mainCard" class="flashcard" onclick="this.classList.toggle('flipped')">
+                <div class="card-face">
+                    <div id="cardLaoFront" class="word-lao-main">ສະບາຍດີ</div>
+                    <div class="hint-text">点击卡片翻看答案</div>
+                </div>
+                <div class="card-back card-face">
+                    <div id="cardCatTag" class="cat-badge">分类</div>
+                    <div id="cardLaoBack" class="word-lao-sub">ສະບາຍດີ</div>
+                    <ruby id="cardZhPy" class="word-zh">你好<rt>nǐ hǎo</rt></ruby>
+                    <div class="hint-text">如果没记住，请点击“不认识”</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-dont" onclick="handleResult(false)">❌ 不认识</button>
+            <button class="btn btn-know" onclick="handleResult(true)">✅ 记住了</button>
+        </div>
+        
+        <div style="text-align:center; margin-top:20px;">
+            <button onclick="navStep(-1)" style="background:none; border:none; color:var(--text-sub); font-size:14px; padding:10px;">← 偷看上一个</button>
+        </div>
+    </div>
+
+    <div id="page-admin" class="page">
+        <h3 style="margin-top:0;">学习概览</h3>
+        <div class="stats-grid">
+            <div class="stat-box"><span id="stat-total" class="stat-num">0</span><span style="font-size:12px; color:var(--text-sub)">词库总数</span></div>
+            <div class="stat-box"><span id="stat-wrong" class="stat-num" style="color:var(--danger)">0</span><span style="font-size:12px; color:var(--text-sub)">待强化(错题)</span></div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0; margin-bottom:15px; font-size:16px;">📝 手动添加新词</h3>
+            <input type="text" id="addLao" placeholder="老挝语 (例如: ສະບາຍດີ)">
+            <input type="text" id="addZh" placeholder="中文意思 (拼音自动生成)">
+            <select id="addCat">
+                <option value="生活">🏠 生活类</option>
+                <option value="工作">💼 工作类</option>
+                <option value="文化">⛩️ 文化类</option>
+            </select>
+            <button class="btn btn-know" style="width:100%; box-shadow:none;" onclick="addNewWord()">加入词库</button>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0; margin-bottom:15px; font-size:16px;">💾 数据备份与恢复</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <button class="btn btn-normal" onclick="exportData()">导出备份</button>
+                <button class="btn btn-normal" onclick="document.getElementById('fileIn').click()">导入恢复</button>
+                <input type="file" id="fileIn" style="display:none" accept=".json" onchange="importData(event)">
+            </div>
+            <button onclick="resetData()" style="width:100%; margin-top:16px; padding:12px; background:none; border:none; color:var(--danger); font-size:13px;">⚠️ 清空数据并恢复默认100词</button>
+        </div>
+    </div>
+</div>
+
+<nav class="tab-bar">
+    <button class="tab-item active" onclick="navTo('dict', this)"><i>📖</i>词典</button>
+    <button class="tab-item" onclick="navTo('study', this)"><i>🧠</i>背诵</button>
+    <button class="tab-item" onclick="navTo('admin', this)"><i>⚙️</i>我的</button>
+</nav>
+
+<script>
+// ==========================================
+// 1. 数据配置区：完整的100个初始核心词库
+// ==========================================
+const initialDB = [
+   // --- 生活类 (生活) ---
+    {lao:"ສະບາຍດີ", zh:"你好", cat:"生活"}, {lao:"ຂອບໃຈ", zh:"谢谢", cat:"生活"}, {lao:"ຂໍໂທດ", zh:"对不起", cat:"生活"}, {lao:"ລາກ່ອນ", zh:"再见", cat:"生活"},
+    {lao:"ແມ່ນແລ້ວ", zh:"是的", cat:"生活"}, {lao:"ບໍ່ແມ່ນ", zh:"不是", cat:"生活"}, {lao:"ກິນເຂົ້າ", zh:"吃饭", cat:"生活"}, {lao:"ດື່ມນ້ຳ", zh:"喝水", cat:"生活"},
+    {lao:"ແຊບ", zh:"好吃", cat:"生活"}, {lao:"ຕະຫຼາດ", zh:"市场", cat:"生活"}, {lao:"ລາຄາເທົ່າໃດ", zh:"多少钱", cat:"生活"}, {lao:"ແພງ", zh:"贵", cat:"生活"},
+    {lao:"ຫ້ອງນ້ຳ", zh:"洗手间", cat:"生活"}, {lao:"ໂຮງແຮມ", zh:"酒店", cat:"生活"}, {lao:"ສະໜາມບິນ", zh:"机场", cat:"生活"}, {lao:"ໂຮງໝໍ", zh:"医院", cat:"生活"},
+    {lao:"ຮ້ອນ", zh:"热", cat:"生活"}, {lao:"ໜາວ", zh:"冷", cat:"生活"}, {lao:"ຊື້", zh:"买", cat:"生活"}, {lao:"ຂາຍ", zh:"卖", cat:"生活"},
+    {lao:"ເຂົ້າຈີ່", zh:"面包", cat:"生活"}, {lao:"ກາເຟ", zh:"咖啡", cat:"生活"}, {lao:"ນົມ", zh:"牛奶", cat:"生活"}, {lao:"ຜັກ", zh:"蔬菜", cat:"生活"},
+    {lao:"ເສື້ອ", zh:"衣服", cat:"生活"}, {lao:"ເກີບ", zh:"鞋子", cat:"生活"}, {lao:"ໂທລະສັບ", zh:"手机", cat:"生活"}, {lao:"ລົດ", zh:"车", cat:"生活"},
+    {lao:"ບ້ານ", zh:"家", cat:"生活"}, {lao:"ໝູ່", zh:"朋友", cat:"生活"}, {lao:"ມື້ວານນີ້", zh:"昨天", cat:"生活"}, {lao:"ມື້ນີ້", zh:"今天", cat:"生活"},
+    {lao:"ມື້ອື່ນ", zh:"明天", cat:"生活"}, {lao:"ຊ່ວຍແດ່", zh:"帮帮我", cat:"生活"}, {lao:"ໃສ", zh:"哪里", cat:"生活"}, {lao:"ແມ່ນຫຍັງ", zh:"什么", cat:"生活"},
+    {lao:"ຊົ່ວໂມງ", zh:"小时", cat:"生活"}, {lao:"ນາທີ", zh:"分钟", cat:"生活"}, {lao:"ເງິນ", zh:"钱", cat:"生活"}, {lao:"ໄປ", zh:"去", cat:"生活"},
+    {lao:"ພໍ່", zh:"爸爸", cat:"生活"}, {lao:"ແມ່", zh:"妈妈", cat:"生活"}, {lao:"ລູກ", zh:"孩子", cat:"生活"}, {lao:"ອ້າຍ", zh:"哥哥", cat:"生活"},
+    {lao:"ເອື້ອຍ", zh:"姐姐", cat:"生活"}, {lao:"ນ້ອງ", zh:"弟弟妹妹", cat:"生活"}, {lao:"ປູ່/ຍ່າ", zh:"祖父母", cat:"生活"}, {lao:"ຮັກ", zh:"爱", cat:"生活"},
+    {lao:"ດີ", zh:"好", cat:"生活"}, {lao:"ງາມ", zh:"漂亮", cat:"生活"}, {lao:"ໃຫຍ່", zh:"大", cat:"生活"}, {lao:"ນ້ອຍ", zh:"小", cat:"生活"},
+    {lao:"ສູງ", zh:"高", cat:"生活"}, {lao:"ຕ່ຳ", zh:"矮/低", cat:"生活"}, {lao:"ໄວ", zh:"快", cat:"生活"}, {lao:"ຊ້າ", zh:"慢", cat:"生活"},
+    {lao:"ຍ່າງ", zh:"走", cat:"生活"}, {lao:"ແລ່ນ", zh:"跑", cat:"生活"}, {lao:"ນັ່ງ", zh:"坐", cat:"生活"}, {lao:"ນອນ", zh:"睡", cat:"生活"},
+    {lao:"ລຸກ", zh:"起床", cat:"生活"}, {lao:"ອາບນ້ຳ", zh:"洗澡", cat:"生活"}, {lao:"ຖູແຂ້ວ", zh:"刷牙", cat:"生活"}, {lao:"ເບິ່ງ", zh:"看", cat:"生活"},
+    {lao:"ຟັງ", zh:"听", cat:"生活"}, {lao:"ເວົ້າ", zh:"说", cat:"生活"}, {lao:"ອ່ານ", zh:"读", cat:"生活"}, {lao:"ຂຽນ", zh:"写", cat:"生活"},
+    {lao:"ເຂົ້າໃຈ", zh:"理解", cat:"生活"}, {lao:"ຈື່", zh:"记得", cat:"生活"}, {lao:"ລືມ", zh:"忘记", cat:"生活"}, {lao:"ຢາກ", zh:"想要", cat:"生活"},
+    {lao:"ມີ", zh:"有", cat:"生活"}, {lao:"ເປັນ", zh:"是/会", cat:"生活"}, {lao:"ເຮັດ", zh:"做", cat:"生活"}, {lao:"ໃຫ້", zh:"给", cat:"生活"},
+    {lao:"ເອົາ", zh:"拿/取", cat:"生活"}, {lao:"ໃຊ້", zh:"用", cat:"生活"}, {lao:"ມາ", zh:"来", cat:"生活"}, {lao:"ກັບ", zh:"回/和", cat:"生活"},
+    {lao:"ໄຂ່", zh:"鸡蛋", cat:"生活"}, {lao:"ຊີ້ນ", zh:"肉", cat:"生活"}, {lao:"ປາ", zh:"鱼", cat:"生活"}, {lao:"ໝາກໄມ້", zh:"水果", cat:"生活"},
+    {lao:"ສົ້ມ", zh:"酸", cat:"生活"}, {lao:"ຫວານ", zh:"甜", cat:"生活"}, {lao:"ເຜັດ", zh:"辣", cat:"生活"}, {lao:"ເຄັມ", zh:"咸", cat:"生活"},
+    {lao:"ຂົມ", zh:"苦", cat:"生活"}, {lao:"ຈືດ", zh:"淡", cat:"生活"}, {lao:"ຫິວ", zh:"饿", cat:"生活"}, {lao:"ອີ່ມ", zh:"饱", cat:"生活"},
+    {lao:"ແກງ", zh:"汤", cat:"生活"}, {lao:"ເຂົ້າຜັດ", zh:"炒饭", cat:"生活"}, {lao:"ໝີ່", zh:"面条", cat:"生活"}, {lao:"ນ້ຳກ້ອນ", zh:"冰块", cat:"生活"},
+    {lao:"ເບຍ", zh:"啤酒", cat:"生活"}, {lao:"ເຫຼົ້າ", zh:"酒", cat:"生活"}, {lao:"ຢາສູບ", zh:"香烟", cat:"生活"}, {lao:"ໄຟ", zh:"火/电", cat:"生活"},
+    {lao:"ນ້ຳຕານ", zh:"糖", cat:"生活"}, {lao:"ເກືອ", zh:"盐", cat:"生活"}, {lao:"ນ້ຳປາ", zh:"鱼露", cat:"生活"}, {lao:"ບ່ວງ", zh:"勺子", cat:"生活"},
+    {lao:"ສ້ອມ", zh:"叉子", cat:"生活"}, {lao:"ຖ້ວຍ", zh:"碗", cat:"生活"}, {lao:"ຈານ", zh:"盘子", cat:"生活"}, {lao:"ຈອກ", zh:"杯子", cat:"生活"},
+    {lao:"ມີດ", zh:"刀", cat:"生活"}, {lao:"ໝໍ້", zh:"锅", cat:"生活"}, {lao:"ຕູ້ເຢັນ", zh:"冰箱", cat:"生活"}, {lao:"ພັດລົມ", zh:"风扇", cat:"生活"},
+    {lao:"ແອ", zh:"空调", cat:"生活"}, {lao:"ໂທລະທັດ", zh:"电视", cat:"生活"}, {lao:"ຕຽງ", zh:"床", cat:"生活"}, {lao:"ໝອນ", zh:"枕头", cat:"生活"},
+    {lao:"ຜ້າຫົ່ມ", zh:"被子", cat:"生活"}, {lao:"ສີນ້ຳເງິນ", zh:"蓝色", cat:"生活"}, {lao:"ສີແດງ", zh:"红色", cat:"生活"}, {lao:"ສີຂຽວ", zh:"绿色", cat:"生活"},
+    {lao:"ສີເຫຼືອງ", zh:"黄色", cat:"生活"}, {lao:"ສີຂາວ", zh:"白色", cat:"生活"}, {lao:"ສີດຳ", zh:"黑色", cat:"生活"}, {lao:"ວັນຈັນ", zh:"周一", cat:"生活"},
+    {lao:"ວັນອັງຄານ", zh:"周二", cat:"生活"}, {lao:"ວັນພຸດ", zh:"周三", cat:"生活"}, {lao:"ວັນພະຫັດ", zh:"周四", cat:"生活"}, {lao:"ວັນສຸກ", zh:"周五", cat:"生活"},
+    {lao:"ວັນເສົາ", zh:"周六", cat:"生活"}, {lao:"ວັນອາທິດ", zh:"周日", cat:"生活"}, {lao:"ເດືອນ", zh:"月", cat:"生活"}, {lao:"ປີ", zh:"年", cat:"生活"},
+    {lao:"ຕອນເຊົ້າ", zh:"早上", cat:"生活"}, {lao:"ຕອນສວຍ", zh:"中午", cat:"生活"}, {lao:"ຕອນແລງ", zh:"晚上", cat:"生活"}, {lao:"ກາງຄືນ", zh:"深夜", cat:"生活"},
+    {lao:"ຝົນຕົກ", zh:"下雨", cat:"生活"}, {lao:"ແດດອອກ", zh:"晴天", cat:"生活"}, {lao:"ລົມພັດ", zh:"刮风", cat:"生活"}, {lao:"ຟ້າຮ້ອງ", zh:"打雷", cat:"生活"},
+    {lao:"ລົດຖີບ", zh:"自行车", cat:"生活"}, {lao:"ລົດຈັກ", zh:"摩托车", cat:"生活"}, {lao:"ລົດເມ", zh:"公交车", cat:"生活"}, {lao:"ຍົນ", zh:"飞机", cat:"生活"},
+    {lao:"ເຮືອ", zh:"船", cat:"生活"}, {lao:"ປີ້", zh:"票", cat:"生活"}, {lao:"ທາງ", zh:"路", cat:"生活"}, {lao:"ໃກ້", zh:"近", cat:"生活"},
+    {lao:"ໄກ", zh:"远", cat:"生活"}, {lao:"ຊື່", zh:"名字/直", cat:"生活"}, {lao:"ຊ້າຍ", zh:"左", cat:"生活"}, {lao:"ຂວາ", zh:"右", cat:"生活"},
+    {lao:"ລ້ຽວ", zh:"转弯", cat:"生活"}, {lao:"ຢຸດ", zh:"停止", cat:"生活"}, {lao:"ລະວັງ", zh:"小心", cat:"生活"}, {lao:"ອັນຕະລາຍ", zh:"危险", cat:"生活"},
+    {lao:"ມ່ວນ", zh:"开心", cat:"生活"}, {lao:"ເສຍໃຈ", zh:"难过", cat:"生活"}, {lao:"ຮ້ອງໄຫ້", zh:"哭", cat:"生活"}, {lao:"ຫົວ", zh:"笑/头", cat:"生活"},
+    {lao:"ຢ້ານ", zh:"害怕", cat:"生活"}, {lao:"ໃຈຮ້າຍ", zh:"生气", cat:"生活"}, {lao:"ເມື່ອຍ", zh:"累", cat:"生活"}, {lao:"ສະບາຍ", zh:"舒服", cat:"生活"},
+    {lao:"ເຈັບ", zh:"疼", cat:"生活"}, {lao:"ເປັນໄຂ້", zh:"发烧", cat:"生活"}, {lao:"ໄອ", zh:"咳嗽", cat:"生活"}, {lao:"ຢາ", zh:"药", cat:"生活"},
+    {lao:"ແພດ", zh:"医生", cat:"生活"}, {lao:"ພະຍາບານ", zh:"护士", cat:"生活"}, {lao:"ແວ່ນຕາ", zh:"眼镜", cat:"生活"}, {lao:"ຜົມ", zh:"头发", cat:"生活"},
+    {lao:"ໜ້າ", zh:"脸/页", cat:"生活"}, {lao:"ຕາ", zh:"眼睛", cat:"生活"}, {lao:"ດັງ", zh:"鼻子", cat:"生活"}, {lao:"ປາກ", zh:"嘴巴", cat:"生活"},
+    {lao:"ຫູ", zh:"耳朵", cat:"生活"}, {lao:"ມື", zh:"手", cat:"生活"}, {lao:"ຂາ", zh:"腿", cat:"生活"}, {lao:"ຕີນ", zh:"脚", cat:"生活"},
+    {lao:"ສົງ", zh:"裤子", cat:"生活"}, {lao:"ໝວກ", zh:"帽子", cat:"生活"}, {lao:"ກະເປົາ", zh:"包", cat:"生活"}, {lao:"ຄັນຮົ່ມ", zh:"伞", cat:"生活"},
+    {lao:"ລ້າງມື", zh:"洗手", cat:"生活"}, {lao:"ສະບູ", zh:"肥皂", cat:"生活"}, {lao:"ຢາສີແຂ້ວ", zh:"牙膏", cat:"生活"}, {lao:"ເຈ້ຍ", zh:"纸", cat:"生活"},
+    {lao:"ຖັງຂີ້ເຫຍື້ອ", zh:"垃圾桶", cat:"生活"}, {lao:"ສະອາດ", zh:"干净", cat:"生活"}, {lao:"ເປື້ອນ", zh:"脏", cat:"生活"}, {lao:"ຫອມ", zh:"香", cat:"生活"},
+    {lao:"ເໝັນ", zh:"臭", cat:"生活"}, {lao:"ໜັກ", zh:"重", cat:"生活"}, {lao:"ເບົາ", zh:"轻", cat:"生活"}, {lao:"ແຂງ", zh:"硬", cat:"生活"},
+    {lao:"ອ່ອນ", zh:"软", cat:"生活"}, {lao:"ງ່າຍ", zh:"简单", cat:"生活"}, {lao:"ຍາກ", zh:"难", cat:"生活"}, {lao:"ເຕັມ", zh:"满", cat:"生活"},
+    {lao:"ນ້ຳ", zh:"水", cat:"生活"}, {lao:"ນ້ຳດື່ມ", zh:"饮用水", cat:"生活"}, {lao:"ນ້ຳຕົ້ມ", zh:"开水", cat:"生活"}, {lao:"ນ້ຳຫວານ", zh:"甜饮", cat:"生活"},
+    {lao:"ເຂົ້າ", zh:"米饭", cat:"生活"}, {lao:"ເຂົ້າຫຼາມ", zh:"竹筒饭", cat:"生活"}, {lao:"ເຂົ້າປຽກ", zh:"老式米粉", cat:"生活"}, {lao:"ເຂົ້າປຸ້ນ", zh:"凉拌粉", cat:"生活"},
+    {lao:"ຊີ້ນງົວ", zh:"牛肉", cat:"生活"}, {lao:"ຊີ້ນໝູ", zh:"猪肉", cat:"生活"}, {lao:"ຊີ້ນໄກ່", zh:"鸡肉", cat:"生活"}, {lao:"ຊີ້ນເປັດ", zh:"鸭肉", cat:"生活"},
+    {lao:"ໝາກເຜັດ", zh:"辣椒", cat:"生活"}, {lao:"ກະທຽມ", zh:"大蒜", cat:"生活"}, {lao:"ຫົວສິງໄຄ", zh:"香茅", cat:"生活"}, {lao:"ຂີງ", zh:"姜", cat:"生活"},
+    {lao:"ໝາກນາວ", zh:"柠檬", cat:"生活"}, {lao:"ໝາກມ່ວງ", zh:"芒果", cat:"生活"}, {lao:"ໝາກຫຸ່ງ", zh:"木瓜", cat:"生活"}, {lao:"ໝາກກ້ວຍ", zh:"香蕉", cat:"生活"},
+    {lao:"ໝາກພ້າວ", zh:"椰子", cat:"生活"}, {lao:"ໝາກນັດ", zh:"菠萝", cat:"生活"}, {lao:"ໝາກໂມ", zh:"西瓜", cat:"生活"}, {lao:"ໝາກລຳໄຍ", zh:"龙眼", cat:"生活"},
+    {lao:"ຕະຫຼາດເຊົ້າ", zh:"早市", cat:"生活"}, {lao:"ຕະຫຼາດແລງ", zh:"晚市", cat:"生活"}, {lao:"ຮ້ານຄ້າ", zh:"小店", cat:"生活"}, {lao:"ຫ້າງສັນພະສິນຄ້າ", zh:"商场", cat:"生活"},
+    {lao:"ເສື້ອຜ້າ", zh:"服饰", cat:"生活"}, {lao:"ກະໂປ່ງ", zh:"裙子", cat:"生活"}, {lao:"ຜ້າເຊັດຕົວ", zh:"浴巾", cat:"生活"}, {lao:"ຜ້າປູຕຽງ", zh:"床单", cat:"生活"},
+    {lao:"ກະຈົກ", zh:"镜子", cat:"生活"}, {lao:"ຫວີ", zh:"梳子", cat:"生活"}, {lao:"ມີດແຖໜວດ", zh:"剃须刀", cat:"生活"}, {lao:"ຊົງຜົມ", zh:"发型", cat:"生活"},
+    {lao:"ສະບູຝຸ່ນ", zh:"洗衣粉", cat:"生活"}, {lao:"ນ້ຳຢາລ້າງຈານ", zh:"洗洁精", cat:"生活"}, {lao:"ໄຟສາຍ", zh:"手电筒", cat:"生活"}, {lao:"ຖ່ານ", zh:"电池/炭", cat:"生活"},
+    {lao:"ຄ້ອນຕີ", zh:"锤子", cat:"生活"}, {lao:"ສະກູ", zh:"螺丝", cat:"生活"}, {lao:"ກາວ", zh:"胶水", cat:"生活"}, {lao:"ເຊືອກ", zh:"绳子", cat:"生活"},
+    {lao:"ຕູ້ເສື້ອຜ້າ", zh:"衣柜", cat:"生活"}, {lao:"ໂຕະ", zh:"桌子", cat:"生活"}, {lao:"ຕັ່ງ", zh:"椅子", cat:"生活"}, {lao:"ໂຄມໄຟ", zh:"台灯", cat:"生活"},
+    {lao:"ຮູບຖ່າຍ", zh:"相片", cat:"生活"}, {lao:"ໂມງ", zh:"表/钟", cat:"生活"}, {lao:"ກະແຈ", zh:"钥匙", cat:"生活"}, {lao:"ແມ່ກະແຈ", zh:"锁", cat:"生活"},
+    {lao:"ລົດບັນທຸກ", zh:"卡车", cat:"生活"}, {lao:"ລົດຕຸກຕຸກ", zh:"三轮车", cat:"生活"}, {lao:"ລົດເມໂດຍສານ", zh:"长途车", cat:"生活"}, {lao:"ນ້ຳມັນ", zh:"汽油/油", cat:"生活"},
+    {lao:"ຢາງລົດ", zh:"轮胎", cat:"生活"}, {lao:"ໝໍ້ໄຟລົດ", zh:"电瓶", cat:"生活"}, {lao:"ໄຟແດງ", zh:"红绿灯", cat:"生活"}, {lao:"ທາງດ່ວນ", zh:"高速路", cat:"生活"},
+    {lao:"ຂົວ", zh:"桥", cat:"生活"}, {lao:"ແຄມທາງ", zh:"路边", cat:"生活"}, {lao:"ສີ່ແຍກ", zh:"十字路口", cat:"生活"}, {lao:"ວົງວຽນ", zh:"环岛", cat:"生活"},
+    {lao:"ໝາ", zh:"狗", cat:"生活"}, {lao:"ແມວ", zh:"猫", cat:"生活"}, {lao:"ໄກ່", zh:"鸡", cat:"生活"}, {lao:"ເປັດ", zh:"鸭", cat:"生活"},
+    {lao:"ງົວ", zh:"牛", cat:"生活"}, {lao:"ຄວາຍ", zh:"水牛", cat:"生活"}, {lao:"ໝູ", zh:"猪", cat:"生活"}, {lao:"ມ້າ", zh:"马", cat:"生活"},
+    {lao:"ນົກ", zh:"鸟", cat:"生活"}, {lao:"ໜູ", zh:"老鼠", cat:"生活"}, {lao:"ງູ", zh:"蛇", cat:"生活"}, {lao:"ຍຸງ", zh:"蚊子", cat:"生活"},
+    {lao:"ແມງວັນ", zh:"苍蝇", cat:"生活"}, {lao:"ແມງສາບ", zh:"蟑螂", cat:"生活"}, {lao:"ມົດ", zh:"蚂蚁", cat:"生活"}, {lao:"ເຜິ້ງ", zh:"蜜蜂", cat:"生活"},
+    {lao:"ສີບົວ", zh:"粉色", cat:"生活"}, {lao:"ສີສົ້ມ", zh:"橙色", cat:"生活"}, {lao:"ສີນ້ຳຕານ", zh:"棕色", cat:"生活"}, {lao:"ສີມ່ວງ", zh:"紫色", cat:"生活"},
+    {lao:"ສີເທົາ", zh:"灰色", cat:"生活"}, {lao:"ສີຄຳ", zh:"金色", cat:"生活"}, {lao:"ສີເງິນ", zh:"银色", cat:"生活"}, {lao:"ແຈ້ງ", zh:"亮/清楚", cat:"生活"},
+    {lao:"ມືດ", zh:"暗", cat:"生活"}, {lao:"ໜາ", zh:"厚", cat:"生活"}, {lao:"ບາງ", zh:"薄", cat:"生活"}, {lao:"ກວ້າງ", zh:"宽", cat:"生活"},
+    {lao:"ແຄບ", zh:"窄", cat:"生活"}, {lao:"ຊື່", zh:"直/名字", cat:"生活"}, {lao:"ຄົດ", zh:"弯曲", cat:"生活"}, {lao:"ສູງ", zh:"高", cat:"生活"},
+    {lao:"ເປົ່າ", zh:"空的", cat:"生活"}, {lao:"ໃໝ່", zh:"新", cat:"生活"}, {lao:"ເກົ່າ", zh:"旧", cat:"生活"}, {lao:"ແພງ", zh:"贵", cat:"生活"},
+    {lao:"ຖືກ", zh:"便宜/对", cat:"生活"}, {lao:"ຜິດ", zh:"错", cat:"生活"}, {lao:"ແທ້", zh:"真的", cat:"生活"}, {lao:"ຕົວະ", zh:"谎言", cat:"生活"},
+    {lao:"ດົນ", zh:"久", cat:"生活"}, {lao:"ແປັບດຽວ", zh:"一会儿", cat:"生活"}, {lao:"ກ່ອນ", zh:"之前", cat:"生活"}, {lao:"ຫຼັງ", zh:"之后/背", cat:"生活"},
+    {lao:"ບາງເທື່ອ", zh:"有时候", cat:"生活"}, {lao:"ທຸກມື້", zh:"每天", cat:"生活"}, {lao:"ຕະຫຼອດ", zh:"一直", cat:"生活"}, {lao:"ປົກກະຕິ", zh:"正常", cat:"生活"},
+    {lao:"ພິເສດ", zh:"特别", cat:"生活"}, {lao:"ອັນດຽວກັນ", zh:"同一个", cat:"生活"}, {lao:"ຕ່າງກັນ", zh:"不同的", cat:"生活"}, {lao:"ອາດຈະ", zh:"可能", cat:"生活"},
+    {lao:"ແນ່ນອນ", zh:"肯定", cat:"生活"}, {lao:"ພໍແລ້ວ", zh:"足够了", cat:"生活"}, {lao:"ອີກ", zh:"再/又", cat:"生活"}, {lao:"ພ້ອມ", zh:"准备好/同时", cat:"生活"},
+    {lao:"ຄິດ", zh:"想", cat:"生活"}, {lao:"ຄິດຮອດ", zh:"想念", cat:"生活"}, {lao:"ຮູ້", zh:"知道", cat:"生活"}, {lao:"ຮູ້ສຶກ", zh:"感觉", cat:"生活"},
+    {lao:"ສົນໃຈ", zh:"感兴趣", cat:"生活"}, {lao:"ຕັດສິນໃຈ", zh:"决定", cat:"生活"}, {lao:"ພະຍາຍາມ", zh:"努力", cat:"生活"}, {lao:"ສັນຍາ", zh:"承诺", cat:"生活"},
+    {lao:"ເລີ່ມ", zh:"开始", cat:"生活"}, {lao:"ແລ້ວ", zh:"好了/已经", cat:"生活"}, {lao:"ຈົບ", zh:"结束", cat:"生活"}, {lao:"ຊະນະ", zh:"赢", cat:"生活"},
+    {lao:"ເສຍ", zh:"输/丢/坏", cat:"生活"}, {lao:"ຢືມ", zh:"借", cat:"生活"}, {lao:"ຄືນ", zh:"还/夜晚", cat:"生活"}, {lao:"ຊັກເຄື່ອງ", zh:"洗衣服", cat:"生活"},
+    {lao:"ຕາກເຄື່ອງ", zh:"晾衣服", cat:"生活"}, {lao:"ລີດເຄື່ອງ", zh:"熨衣服", cat:"生活"}, {lao:"ແຕ່ງກິນ", zh:"做饭", cat:"生活"}, {lao:"ລ້າງຖ້ວຍ", zh:"洗碗", cat:"生活"},
+    {lao:"ປັດກວດ", zh:"打扫", cat:"生活"}, {lao:"ຖູພື້ນ", zh:"拖地", cat:"生活"}, {lao:"ຖິ້ມຂີ້ເຫຍື້ອ", zh:"扔垃圾", cat:"生活"}, {lao:"ຫົດນ້ຳຕົ້ນໄມ້", zh:"浇花", cat:"生活"},
+    {lao:"ເປີດ", zh:"开", cat:"生活"}, {lao:"ປິດ", zh:"关", cat:"生活"}, {lao:"ຊ່ວຍ", zh:"帮", cat:"生活"}, {lao:"ລໍຖ້າ", zh:"等", cat:"生活"},
+    {lao:"ຍູ້", zh:"推", cat:"生活"}, {lao:"ດຶງ", zh:"拉", cat:"生活"}, {lao:"ຍົກ", zh:"举/抬", cat:"生活"}, {lao:"ຖື", zh:"拿着", cat:"生活"},
+    {lao:"ວາງ", zh:"放", cat:"生活"}, {lao:"ຊອກຫາ", zh:"寻找", cat:"生活"}, {lao:"ພົບ", zh:"遇见", cat:"生活"}, {lao:"ແນະນຳ", zh:"推荐/介绍", cat:"生活"},
+    {lao:"ຖາມ", zh:"问", cat:"生活"}, {lao:"ຕອບ", zh:"答", cat:"生活"}, {lao:"ບອກ", zh:"告诉", cat:"生活"}, {lao:"ສົ່ງ", zh:"送/发", cat:"生活"},
+    {lao:"ຮັບ", zh:"接/受", cat:"生活"}, {lao:"ຈ່າຍ", zh:"付钱", cat:"生活"}, {lao:"ແລກ", zh:"换", cat:"生活"}, {lao:"ເກັບ", zh:"收/存", cat:"生活"},
+    {lao:"ຖ່າຍຮູບ", zh:"拍照", cat:"生活"}, {lao:"ໂທຫາ", zh:"打电话", cat:"生活"}, {lao:"ຫຼິ້ນ", zh:"玩", cat:"生活"}, {lao:"ລົມກັນ", zh:"聊天", cat:"生活"},
+    {lao:"ຮ້ອງເພງ", zh:"唱歌", cat:"生活"}, {lao:"ເຕັ້ນ", zh:"跳舞", cat:"生活"}, {lao:"ອອກກຳລັງກາຍ", zh:"运动", cat:"生活"}, {lao:"ລອຍນ້ຳ", zh:"游泳", cat:"生活"},
+    {lao:"ເດີນທາງ", zh:"旅行", cat:"生活"}, {lao:"ພັກຜ່ອນ", zh:"休息", cat:"生活"}, {lao:"ຢ້ຽມຢາມ", zh:"访问/看望", cat:"生活"}, {lao:"ສະຫຼອງ", zh:"庆祝", cat:"生活"},
+    {lao:"ຄົນ", zh:"人", cat:"生活"}, {lao:"ຜູ້ຊາຍ", zh:"男人", cat:"生活"}, {lao:"ຜູ້ຍິງ", zh:"女人", cat:"生活"}, {lao:"ເດັກນ້ອຍ", zh:"小孩", cat:"生活"},
+    {lao:"ໄວຮຸ່ນ", zh:"青少年", cat:"生活"}, {lao:"ຜູ້ໃຫຍ່", zh:"大人", cat:"生活"}, {lao:"ຄົນແກ່", zh:"老人", cat:"生活"}, {lao:"ນັກທ່ອງທ່ຽວ", zh:"游客", cat:"生活"},
+    {lao:"ຄົນລາວ", zh:"老挝人", cat:"生活"}, {lao:"ຄົນຈີນ", zh:"中国人", cat:"生活"}, {lao:"ຄົນຕ່າງປະເທດ", zh:"外国人", cat:"生活"}, {lao:"ແຟນ", zh:"对象/粉丝", cat:"生活"},
+    {lao:"ຜົວ", zh:"丈夫", cat:"生活"}, {lao:"ເມຍ", zh:"妻子", cat:"生活"}, {lao:"ຄູ່ຮັກ", zh:"情侣", cat:"生活"}, {lao:"ເຈົ້າຂອງ", zh:"主人", cat:"生活"},
+    {lao:"ຕົນເອງ", zh:"自己", cat:"生活"}, {lao:"ທຸກຄົນ", zh:"每个人", cat:"生活"}, {lao:"ບາງຄົນ", zh:"有些人", cat:"生活"}, {lao:"ໃຜ", zh:"谁", cat:"生活"},
+    {lao:"ໂຕ", zh:"只(动物量词)/身体", cat:"生活"}, {lao:"ຫົວ", zh:"头", cat:"生活"}, {lao:"ຄໍ", zh:"脖子", cat:"生活"}, {lao:"ບ່າ", zh:"肩膀", cat:"生活"},
+    {lao:"ເອິກ", zh:"胸", cat:"生活"}, {lao:"ທ້ອງ", zh:"肚子", cat:"生活"}, {lao:"ຫຼັງ", zh:"背", cat:"生活"}, {lao:"ແຂນ", zh:"胳膊", cat:"生活"},
+    {lao:"ສອກ", zh:"肘", cat:"生活"}, {lao:"ນິ້ວມື", zh:"手指", cat:"生活"}, {lao:"ເລັບ", zh:"指甲", cat:"生活"}, {lao:"ຫົວເຂົ່າ", zh:"膝盖", cat:"生活"},
+    {lao:"ເລືອດ", zh:"血", cat:"生活"}, {lao:"ກະດູກ", zh:"骨头", cat:"生活"}, {lao:"ຜິວໜັງ", zh:"皮肤", cat:"生活"}, {lao:"ຫົວໃຈ", zh:"心脏", cat:"生活"},
+    {lao:"ປອດ", zh:"肺", cat:"生活"}, {lao:"ຕັບ", zh:"肝", cat:"生活"}, {lao:"ກະເພາະ", zh:"胃", cat:"生活"}, {lao:"ແຂ້ວ", zh:"牙齿", cat:"生活"},
+    {lao:"ລິ້ນ", zh:"舌头", cat:"生活"}, {lao:"ສົບ", zh:"嘴唇", cat:"生活"}, {lao:"ໜ້າຜາກ", zh:"额头", cat:"生活"}, {lao:"ແກ້ມ", zh:"脸颊", cat:"生活"},
+    {lao:"ຄາງ", zh:"下巴", cat:"生活"}, {lao:"ຂົນຕາ", zh:"睫毛", cat:"生活"}, {lao:"ຄິ້ວ", zh:"眉毛", cat:"生活"}, {lao:"ເຫື່ອ", zh:"汗", cat:"生活"},
+
+    // --- 工作类 (工作) ---
+    {lao:"ຫ້ອງການ", zh:"办公室", cat:"工作"}, {lao:"ການປະຊຸມ", zh:"会议", cat:"工作"}, {lao:"ເອກະສານ", zh:"文件", cat:"工作"}, {lao:"ລາຍງານ", zh:"报告", cat:"工作"},
+    {lao:"ສັນຍາ", zh:"合同", cat:"工作"}, {lao:"ໂຄງການ", zh:"项目", cat:"工作"}, {lao:"ຄອມພິວເຕີ", zh:"电脑", cat:"工作"}, {lao:"ເພື່ອນຮ່ວມງານ", zh:"同事", cat:"工作"},
+    {lao:"ນັດໝາຍ", zh:"预约", cat:"工作"}, {lao:"ເງິນເດືອນ", zh:"工资", cat:"工作"}, {lao:"ຫົວໜ້າ", zh:"领导", cat:"工作"}, {lao:"ລູກຄ້າ", zh:"客户", cat:"工作"},
+    {lao:"ບໍລິສັດ", zh:"公司", cat:"工作"}, {lao:"ແຜນການ", zh:"计划", cat:"工作"}, {lao:"ທະນາຄານ", zh:"银行", cat:"工作"}, {lao:"ທຸລະກິດ", zh:"生意", cat:"工作"},
+    {lao:"ສົ່ງອອກ", zh:"出口", cat:"工作"}, {lao:"ນໍາເຂົ້າ", zh:"进口", cat:"工作"}, {lao:"ກຳໄລ", zh:"利润", cat:"工作"}, {lao:"ພາສີ", zh:"税收", cat:"工作"},
+    {lao:"ກົດໝາຍ", zh:"法律", cat:"工作"}, {lao:"ຄວາມຮັບຜິດຊອບ", zh:"责任", cat:"工作"}, {lao:"ການຮ່ວມມື", zh:"合作", cat:"工作"}, {lao:"ພັດທະນາ", zh:"发展", cat:"工作"},
+    {lao:"ສໍາເລັດ", zh:"完成", cat:"工作"}, {lao:"ອິນເຕີເນັດ", zh:"网络", cat:"工作"}, {lao:"ນາມບັດ", zh:"名片", cat:"工作"}, {lao:"ເຊັນ", zh:"签名", cat:"工作"},
+    {lao:"ເວລາ", zh:"时间", cat:"工作"}, {lao:"ວຽກ", zh:"任务", cat:"工作"}, {lao:"ສະຖານທູດ", zh:"大使馆", cat:"工作"}, {lao:"ກະຊວງ", zh:"部(政府部门)", cat:"工作"},
+    {lao:"ລັດຖະບານ", zh:"政府", cat:"工作"}, {lao:"ພາສີ", zh:"关税", cat:"工作"}, {lao:"ໃບຂັບຂີ່", zh:"驾照", cat:"工作"}, {lao:"ໜັງສືຜ່ານແດນ", zh:"护照", cat:"工作"},
+    {lao:"ວີຊາ", zh:"签证", cat:"工作"}, {lao:"ຕຳຫຼວດ", zh:"警察", cat:"工作"}, {lao:"ທະຫານ", zh:"军人", cat:"工作"}, {lao:"ນັກລົງທຶນ", zh:"投资者", cat:"工作"},
+    {lao:"ຕະຫຼາດຫຼັກຊັບ", zh:"证券交易所", cat:"工作"}, {lao:"ອັດຕາແລກປ່ຽນ", zh:"汇率", cat:"工作"}, {lao:"ໂອນເງິນ", zh:"转账", cat:"工作"}, {lao:"ຕູ້ ATM", zh:"取款机", cat:"工作"},
+    {lao:"ບັນຊີ", zh:"账户/会计", cat:"工作"}, {lao:"ໜີ້", zh:"债", cat:"工作"}, {lao:"ດອກເບ້ຍ", zh:"利息", cat:"工作"}, {lao:"ປະກັນໄພ", zh:"保险", cat:"工作"},
+    {lao:"ການກໍ່ສ້າງ", zh:"建筑施工", cat:"工作"}, {lao:"ວິສະວະກອນ", zh:"工程师", cat:"工作"}, {lao:"ກຳມະກອນ", zh:"工人", cat:"工作"}, {lao:"ເຄື່ອງຈັກ", zh:"机器", cat:"工作"},
+    {lao:"ໄຟຟ້າ", zh:"电力", cat:"工作"}, {lao:"ນ້ຳປະປາ", zh:"自来水", cat:"工作"}, {lao:"ວັດສະດຸ", zh:"材料", cat:"工作"}, {lao:"ຊາຍ", zh:"沙子", cat:"工作"},
+    {lao:"ຊີມັງ", zh:"水泥", cat:"工作"}, {lao:"ເຫຼັກ", zh:"钢/铁", cat:"工作"}, {lao:"ໄມ້", zh:"木头", cat:"工作"}, {lao:"ສ້ອມແປງ", zh:"修理", cat:"工作"},
+    {lao:"ກວດກາ", zh:"检查", cat:"工作"}, {lao:"ປອດໄພ", zh:"安全", cat:"工作"}, {lao:"ໝວກກັນກະທົບ", zh:"安全帽", cat:"工作"}, {lao:"ຖົງມື", zh:"手套", cat:"工作"},
+    {lao:"ຄັງສິນຄ້າ", zh:"仓库", cat:"工作"}, {lao:"ການຂົນສົ່ງ", zh:"物流/运输", cat:"工作"}, {lao:"ບໍລິການ", zh:"服务", cat:"工作"}, {lao:"ຮ້ານອາຫານ", zh:"饭店", cat:"工作"},
+    {lao:"ພະນັກງານ", zh:"员工", cat:"工作"}, {lao:"ຮັບສະໝັກ", zh:"招聘", cat:"工作"}, {lao:"ສຳພາດ", zh:"面试", cat:"工作"}, {lao:"ປະສົບການ", zh:"经验", cat:"工作"},
+    {lao:"ຄວາມຮູ້", zh:"知识", cat:"工作"}, {lao:"ການສຶກສາ", zh:"教育", cat:"工作"}, {lao:"ໂຮງຮຽນ", zh:"学校", cat:"工作"}, {lao:"ມະຫາວິທະຍາໄລ", zh:"大学", cat:"工作"},
+    {lao:"ຄູ", zh:"老师", cat:"工作"}, {lao:"ນັກຮຽນ", zh:"学生", cat:"工作"}, {lao:"ທຶນ", zh:"资金/奖学金", cat:"工作"}, {lao:"ການຜະລິດ", zh:"生产", cat:"工作"},
+    {lao:"ຄຸນນະພາບ", zh:"质量", cat:"工作"}, {lao:"ລາຄາສົ່ງ", zh:"批发价", cat:"工作"}, {lao:"ລາຄາຍ່ອຍ", zh:"零售价", cat:"工作"}, {lao:"ສ່ວນຫຼຸດ", zh:"折扣", cat:"工作"},
+    {lao:"ໂຄສະນາ", zh:"广告", cat:"工作"}, {lao:"ການຕະຫຼາດ", zh:"市场营销", cat:"工作"}, {lao:"ຍອດຂາຍ", zh:"销售额", cat:"工作"}, {lao:"ຄູ່ແຂ່ງ", zh:"竞争对手", cat:"工作"},
+    {lao:"ເວັບໄຊ", zh:"网站", cat:"工作"}, {lao:"ອີເມລ", zh:"邮件", cat:"工作"}, {lao:"ລະຫັດ", zh:"密码/代码", cat:"工作"}, {lao:"ຂໍ້ມູນ", zh:"信息/数据", cat:"工作"},
+    {lao:"ການສື່ສານ", zh:"沟通", cat:"工作"}, {lao:"ບັນຫາ", zh:"问题", cat:"工作"}, {lao:"ວິທີ", zh:"方法", cat:"工作"}, {lao:"ການຕັດສິນໃຈ", zh:"决定", cat:"工作"},
+    {lao:"ຄວາມກ້າວໜ້າ", zh:"进步", cat:"工作"}, {lao:"ເປົ້າໝາຍ", zh:"目标", cat:"工作"}, {lao:"ຜົນສຳເລັດ", zh:"成就", cat:"工作"}, {lao:"ລາງວັນ", zh:"奖励", cat:"工作"},
+    {lao:"ການລົງໂທດ", zh:"处罚", cat:"工作"}, {lao:"ກົດລະບຽບ", zh:"规章制度", cat:"工作"}, {lao:"ເວລາເຮັດວຽກ", zh:"工作时间", cat:"工作"}, {lao:"ພັກຜ່ອນ", zh:"休息", cat:"工作"},
+    {lao:"ລາພັກ", zh:"请假", cat:"工作"}, {lao:"ໂອທີ", zh:"加班", cat:"工作"}, {lao:"ບັດພະນັກງານ", zh:"工卡", cat:"工作"}, {lao:"ການເດີນທາງ", zh:"出差/旅行", cat:"工作"},
+    {lao:"ຍົນ", zh:"飞机", cat:"工作"}, {lao:"ລົດໄຟ", zh:"火车", cat:"工作"}, {lao:"ສະຖານີ", zh:"车站", cat:"工作"}, {lao:"ດ່ານ", zh:"关卡/口岸", cat:"工作"},
+    {lao:"ການເຈລະຈາ", zh:"谈判", cat:"工作"}, {lao:"ຄວາມເຫັນ", zh:"意见", cat:"工作"}, {lao:"ການປ່ຽນແປງ", zh:"改变", cat:"工作"}, {lao:"ໂອກາດ", zh:"机会", cat:"工作"},
+    {lao:"ອະນາຄົດ", zh:"未来", cat:"工作"}, {lao:"ປະຈຸບັນ", zh:"现在", cat:"工作"}, {lao:"ອະດີດ", zh:"过去", cat:"工作"}, {lao:"ລະບົບ", zh:"系统", cat:"工作"},
+    {lao:"ເຕັກໂນໂລຊີ", zh:"科技", cat:"工作"}, {lao:"ສິ່ງແວດລ້ອມ", zh:"环境", cat:"工作"}, {lao:"ຊັບພະຍາກອນ", zh:"资源", cat:"工作"}, {lao:"ພະລັງງານ", zh:"能源", cat:"工作"},
+    {lao:"ບໍ່ແຮ່", zh:"矿山", cat:"工作"}, {lao:"ຄຳ", zh:"金子", cat:"工作"}, {lao:"ເງິນ", zh:"银/钱", cat:"工作"}, {lao:"ທອງ", zh:"铜", cat:"工作"},
+    {lao:"ກະສິກຳ", zh:"农业", cat:"工作"}, {lao:"ປູກຝັງ", zh:"种植", cat:"工作"}, {lao:"ລ້ຽງສັດ", zh:"养殖", cat:"工作"}, {lao:"ເຂົ້າ", zh:"米/稻谷", cat:"工作"},
+    {lao:"ຢາງພາລາ", zh:"橡胶", cat:"工作"}, {lao:"ໂຮງງານ", zh:"工厂", cat:"工作"}, {lao:"ອຸດສາຫະກຳ", zh:"工业", cat:"工作"}, {lao:"ເສດຖະກິດ", zh:"经济", cat:"工作"},
+    {lao:"ການເມືອງ", zh:"政治", cat:"工作"}, {lao:"ສັງຄົມ", zh:"社会", cat:"工作"}, {lao:"ປະຊາຊົນ", zh:"人民", cat:"工作"}, {lao:"ສິດທິ", zh:"权利", cat:"工作"},
+    {lao:"ຄວາມຍຸດຕິທຳ", zh:"公正", cat:"工作"}, {lao:"ສໍ້ລາດບັງຫຼວງ", zh:"腐败", cat:"工作"}, {lao:"ກວດສອບ", zh:"审计", cat:"工作"}, {lao:"ລົງທະບຽນ", zh:"注册", cat:"工作"},
+    {lao:"ໃບອະນຸຍາດ", zh:"许可证", cat:"工作"}, {lao:"ຕາປະທັບ", zh:"公章", cat:"工作"}, {lao:"ສຳເນົາ", zh:"复印", cat:"工作"}, {lao:"ເບີໂທ", zh:"电话号码", cat:"工作"},
+    {lao:"ໜັງສືມອບອຳນາດ", zh:"授权书", cat:"工作"}, {lao:"ໃບສະເໜີລາຄາ", zh:"报价单", cat:"工作"}, {lao:"ໃບບິນ", zh:"发票/账单", cat:"工作"}, {lao:"ໃບຮັບເງິນ", zh:"收据", cat:"工作"},
+    {lao:"ເງິນສົດ", zh:"现金", cat:"工作"}, {lao:"ເງິນມັດຈຳ", zh:"定金", cat:"工作"}, {lao:"ເງິນງວດ", zh:"分期款", cat:"工作"}, {lao:"ຕົ້ນທຶນ", zh:"成本", cat:"工作"},
+    {lao:"ລາຄາລວມ", zh:"总价", cat:"工作"}, {lao:"ມູນຄ່າ", zh:"价值", cat:"工作"}, {lao:"ບໍລິມາດ", zh:"体积/工程量", cat:"工作"}, {lao:"ເນື້ອທີ່", zh:"面积", cat:"工作"},
+    {lao:"ຄວາມຍາວ", zh:"长度", cat:"工作"}, {lao:"ຄວາມກວ້າງ", zh:"宽度", cat:"工作"}, {lao:"ຄວາມເລິກ", zh:"深度", cat:"工作"}, {lao:"ຄວາມສູງ", zh:"高度", cat:"工作"},
+    {lao:"ລະດັບ", zh:"水平/等级", cat:"工作"}, {lao:"ມາດຕະຖານ", zh:"标准", cat:"工作"}, {lao:"ເຕັກນິກ", zh:"技术", cat:"工作"}, {lao:"ຊ່ຽວຊານ", zh:"专家", cat:"工作"},
+    {lao:"ທີ່ປຶກສາ", zh:"顾问", cat:"工作"}, {lao:"ຜູ້ຈັດການ", zh:"经理", cat:"工作"}, {lao:"ອຳນວຍການ", zh:"董事/院长", cat:"工作"}, {lao:"ປະທານ", zh:"主席/总裁", cat:"工作"},
+    {lao:"ຮອງ", zh:"副职", cat:"工作"}, {lao:"ເລຂາ", zh:"秘书", cat:"工作"}, {lao:"ບັນຊີ", zh:"会计", cat:"工作"}, {lao:"ການເງິນ", zh:"财务", cat:"工作"},
+    {lao:"ຊັບພະຍາກອນມະນຸດ", zh:"人力资源", cat:"工作"}, {lao:"ຝ່າຍຂາຍ", zh:"销售部", cat:"工作"}, {lao:"ຝ່າຍຈັດຊື້", zh:"采购部", cat:"工作"}, {lao:"ສາງສິນຄ້າ", zh:"仓库", cat:"工作"},
+    {lao:"ການຜະລິດ", zh:"生产", cat:"工作"}, {lao:"ສາຍການຜະລິດ", zh:"生产线", cat:"工作"}, {lao:"ວັດຖຸດິບ", zh:"原材料", cat:"工作"}, {lao:"ສິນຄ້າ", zh:"货物", cat:"工作"},
+    {lao:"ຜະລິດຕະພັນ", zh:"产品", cat:"工作"}, {lao:"ເຄື່ອງໝາຍການຄ້າ", zh:"商标", cat:"工作"}, {lao:"ສິດທິບັດ", zh:"专利", cat:"工作"}, {lao:"ລິຂະສິດ", zh:"版权", cat:"工作"},
+    {lao:"ການປະມູນ", zh:"投标", cat:"工作"}, {lao:"ຜູ້ຮັບເໝົາ", zh:"承包商", cat:"工作"}, {lao:"ເຈົ້າຂອງໂຄງການ", zh:"业主", cat:"工作"}, {lao:"ຄູ່ສັນຍາ", zh:"合同方", cat:"工作"},
+    {lao:"ການລະເມີດສັນຍາ", zh:"违约", cat:"工作"}, {lao:"ຄ່າປັບໃໝ", zh:"罚金", cat:"工作"}, {lao:"ການຊົດເຊີຍ", zh:"赔偿", cat:"工作"}, {lao:"ການຟ້ອງຮ້ອງ", zh:"诉讼", cat:"工作"},
+    {lao:"ສານ", zh:"法院", cat:"工作"}, {lao:"ທະນາຍຄວາມ", zh:"律师", cat:"工作"}, {lao:"ພະຍານ", zh:"证人", cat:"工作"}, {lao:"ຫຼັກຖານ", zh:"证据", cat:"工作"},
+    {lao:"ຄະດີ", zh:"案件", cat:"工作"}, {lao:"ໂທດ", zh:"罪责/惩罚", cat:"工作"}, {lao:"ຈຳຄຸກ", zh:"坐牢", cat:"工作"}, {lao:"ປ່ອຍຕົວ", zh:"释放", cat:"工作"},
+    {lao:"ສິດເສລີພາບ", zh:"自由权", cat:"工作"}, {lao:"ຄວາມສະເໝີພາບ", zh:"平等", cat:"工作"}, {lao:"ປະຊາທິປະໄຕ", zh:"民主", cat:"工作"}, {lao:"ສັນຕິພາບ", zh:"和平", cat:"工作"},
+    {lao:"ຄວາມໝັ້ນຄົງ", zh:"稳定/安全", cat:"工作"}, {lao:"ການພັດທະນາ", zh:"发展", cat:"工作"}, {lao:"ຄວາມທັນສະໄໝ", zh:"现代化", cat:"工作"}, {lao:"ປະສິດທິພາບ", zh:"效率", cat:"工作"},
+    {lao:"ນະວັດຕະກຳ", zh:"创新", cat:"工作"}, {lao:"ການຄົ້ນຄວ້າ", zh:"研究", cat:"工作"}, {lao:"ຫ້ອງທົດລອງ", zh:"实验室", cat:"工作"}, {lao:"ສັງເກດ", zh:"观察", cat:"工作"},
+    {lao:"ວິເຄາະ", zh:"分析", cat:"工作"}, {lao:"ສະຫຼຸບ", zh:"总结", cat:"工作"}, {lao:"ຄຳແນະນຳ", zh:"建议", cat:"工作"}, {lao:"ວິທີການ", zh:"步骤/方法", cat:"工作"},
+    {lao:"ຂັ້ນຕອນ", zh:"程序", cat:"工作"}, {lao:"ການອະນຸມັດ", zh:"批准", cat:"工作"}, {lao:"ການລົງນາມ", zh:"签署", cat:"工作"}, {lao:"ການປະກາດ", zh:"公告", cat:"工作"},
+    {lao:"ນິໂຍບາຍ", zh:"政策", cat:"工作"}, {lao:"ຍຸດທະສາດ", zh:"战略", cat:"工作"}, {lao:"ແນວໂນ້ມ", zh:"趋势", cat:"工作"}, {lao:"ສິ່ງທ້າທາຍ", zh:"挑战", cat:"工作"},
+    {lao:"ວິກິດ", zh:"危机", cat:"工作"}, {lao:"ການແກ້ໄຂ", zh:"解决", cat:"工作"}, {lao:"ການສະໜັບສະໜູນ", zh:"支持", cat:"工作"}, {lao:"ເຄືອຂ່າຍ", zh:"网络/人脉", cat:"工作"},
+    {lao:"ຄວາມເຊື່ອໝັ້ນ", zh:"信心/信任", cat:"工作"}, {lao:"ຊື່ສຽງ", zh:"名声", cat:"工作"}, {lao:"ກຽດຕິຍົດ", zh:"荣誉", cat:"工作"}, {lao:"ລາງວັນ", zh:"奖项", cat:"工作"},
+
+    // --- 文化类 (文化) ---
+    {lao:"ວັດ", zh:"寺庙", cat:"文化"}, {lao:"ພະທາດຫຼວງ", zh:"塔銮", cat:"文化"}, {lao:"ບຸນປີໃໝ່", zh:"新年", cat:"文化"}, {lao:"ເຂົ້າໜຽວ", zh:"糯米饭", cat:"文化"},
+    {lao:"ຊຸດລາວ", zh:"老挝服饰", cat:"文化"}, {lao:"ສິ້ນ", zh:"老挝筒裙", cat:"文化"}, {lao:"ດອກຈຳປາ", zh:"占巴花", cat:"文化"}, {lao:"ໃສ່ບາດ", zh:"布施", cat:"文化"},
+    {lao:"ພະສົງ", zh:"僧侣", cat:"文化"}, {lao:"ພິທີບາສີ", zh:"栓线仪式", cat:"文化"}, {lao:"ວັດຊຽງທອງ", zh:"香通寺", cat:"文化"}, {lao:"ຫຼວງພະບາງ", zh:"琅勃拉邦", cat:"文化"},
+    {lao:"ວຽງຈັນ", zh:"万象", cat:"文化"}, {lao:"ປະຕູໄຊ", zh:"凯旋门", cat:"文化"}, {lao:"ແມ່ນ້ຳຂອງ", zh:"湄公河", cat:"文化"}, {lao:"ເບຍລາວ", zh:"老挝啤酒", cat:"文化"},
+    {lao:"ຕໍາໝາກຮຸ່ງ", zh:"凉拌木瓜", cat:"文化"}, {lao:"ລາບ", zh:"老挝肉碎", cat:"文化"}, {lao:"ພາສາລາວ", zh:"老挝语", cat:"文化"}, {lao:"ປະເພນີ", zh:"传统", cat:"文化"},
+    {lao:"ວັດທະນະທຳ", zh:"文化", cat:"文化"}, {lao:"ດົນຕີ", zh:"音乐", cat:"文化"}, {lao:"ການຟ້ອນ", zh:"舞蹈", cat:"文化"}, {lao:"ປະຫວັດສາດ", zh:"历史", cat:"文化"},
+    {lao:"ສິລະປະ", zh:"艺术", cat:"文化"}, {lao:"ນິທານ", zh:"传说", cat:"文化"}, {lao:"ຊາດ", zh:"民族", cat:"文化"}, {lao:"ສັນຕິພາບ", zh:"和平", cat:"文化"},
+    {lao:"ພະພຸດທະຮູບ", zh:"佛像", cat:"文化"}, {lao:"ບຸນຊ່ວງເຮືອ", zh:"龙舟节", cat:"文化"}, {lao:"ບຸນຫໍ່ເຂົ້າປະດັບດິນ", zh:"祭地节", cat:"文化"}, {lao:"ບຸນພະເວດ", zh:"高僧节", cat:"文化"},
+    {lao:"ບຸນບັ້ງໄຟ", zh:"高升节/火箭节", cat:"文化"}, {lao:"ບຸນພະນົມບາ", zh:"塔节", cat:"文化"}, {lao:"ສາດສະໜາ", zh:"宗教", cat:"文化"}, {lao:"ພຸດທະສາດສະໜາ", zh:"佛教", cat:"文化"},
+    {lao:"ທຳມະ", zh:"佛法", cat:"文化"}, {lao:"ຄວາມເຊື່ອ", zh:"信仰", cat:"文化"}, {lao:"ສັກສິດ", zh:"神圣", cat:"文化"}, {lao:"ບຸນ", zh:"功德/节日", cat:"文化"},
+    {lao:"ບາບ", zh:"罪过", cat:"文化"}, {lao:"ສະຫວັນ", zh:"天堂", cat:"文化"}, {lao:"ນະຮົກ", zh:"地狱", cat:"文化"}, {lao:"ໂຊກດີ", zh:"好运", cat:"文化"},
+    {lao:"ແຄນ", zh:"笙(老挝乐器)", cat:"文化"}, {lao:"ຄ້ອງ", zh:"锣", cat:"文化"}, {lao:"ກອງ", zh:"鼓", cat:"文化"}, {lao:"ນາງສັງຂານ", zh:"宋干小姐", cat:"文化"},
+    {lao:"ນ້ຳອົບ", zh:"香水(祭祀用)", cat:"文化"}, {lao:"ສົງພະ", zh:"浴佛", cat:"文化"}, {lao:"ໄຫວ້ພະ", zh:"拜佛", cat:"文化"}, {lao:"ພາຂວັນ", zh:"祭祀托盘", cat:"文化"},
+    {lao:"ຝ້າຍຜູກແຂນ", zh:"白线(栓线用)", cat:"文化"}, {lao:"ຄຳອວຍພອນ", zh:"祝福语", cat:"文化"}, {lao:"ຄວາມສຸກ", zh:"幸福", cat:"文化"}, {lao:"ຄວາມຮັກ", zh:"爱", cat:"文化"},
+    {lao:"ແຂກ", zh:"客人", cat:"文化"}, {lao:"ນ້ຳໃຈ", zh:"心意/慷慨", cat:"文化"}, {lao:"ມາລະຍາດ", zh:"礼仪", cat:"文化"}, {lao:"ຄວາມເຄົາລົບ", zh:"尊敬", cat:"文化"},
+    {lao:"ຜູ້ອາວຸໂສ", zh:"长辈", cat:"文化"}, {lao:"ການທັກທາຍ", zh:"打招呼", cat:"文化"}, {lao:"ນົບ", zh:"合十礼", cat:"文化"}, {lao:"ເຄື່ອງນຸ່ງ", zh:"衣服/服饰", cat:"文化"},
+    {lao:"ຜ້າໄໝ", zh:"丝绸", cat:"文化"}, {lao:"ຜ້າຝ້າຍ", zh:"棉布", cat:"文化"}, {lao:"ລາຍລາວ", zh:"老挝花纹", cat:"文化"}, {lao:"ເຄື່ອງເງິນ", zh:"银器", cat:"文化"},
+    {lao:"ເຄື່ອງປັ້ນດິນເຜົາ", zh:"陶器", cat:"文化"}, {lao:"ກະຕິບເຂົ້າ", zh:"糯米饭篮", cat:"文化"}, {lao:"ພາຖາດ", zh:"托盘", cat:"文化"}, {lao:"ອາຫານລາວ", zh:"老挝菜", cat:"文化"},
+    {lao:"ແຈ່ວ", zh:"蘸酱", cat:"文化"}, {lao:"ປາແດກ", zh:"老挝鱼露/臭鱼酱", cat:"文化"}, {lao:"ປິ້ງໄກ່", zh:"烤鸡", cat:"文化"}, {lao:"ເຂົ້າປຸ້ນ", zh:"老挝米粉", cat:"文化"},
+    {lao:"ໝາກອຶ", zh:"南瓜", cat:"文化"}, {lao:"ໝາກກ້ວຍ", zh:"香蕉", cat:"文化"}, {lao:"ໝາກມ່ວງ", zh:"芒果", cat:"文化"}, {lao:"ໝາກພ້າວ", zh:"椰子", cat:"文化"},
+    {lao:"ທຳມະຊາດ", zh:"自然", cat:"文化"}, {lao:"ປ່າໄມ້", zh:"森林", cat:"文化"}, {lao:"ພູເຂົາ", zh:"山", cat:"文化"}, {lao:"ນ້ຳຕົກຕາດ", zh:"瀑布", cat:"文化"},
+    {lao:"ຖ້ຳ", zh:"洞穴", cat:"文化"}, {lao:"ຊ້າງ", zh:"大象", cat:"文化"}, {lao:"ປະເທດລາວ", zh:"老挝国家", cat:"文化"}, {lao:"ແຂວງ", zh:"省", cat:"文化"},
+    {lao:"ເມືອງ", zh:"县/城市", cat:"文化"}, {lao:"ໝູ່ບ້ານ", zh:"村庄", cat:"文化"}, {lao:"ທຸງຊາດ", zh:"国旗", cat:"文化"}, {lao:"ເພງຊາດ", zh:"国歌", cat:"文化"},
+    {lao:"ເອກະລາດ", zh:"独立", cat:"文化"}, {lao:"ອິດສະລະພາບ", zh:"自由", cat:"文化"}, {lao:"ສາມັກຄີ", zh:"团结", cat:"文化"}, {lao:"ວິລະຊົນ", zh:"英雄", cat:"文化"},
+    {lao:"ພິພິທະພັນ", zh:"博物馆", cat:"文化"}, {lao:"ຫໍສະໝຸດ", zh:"图书馆", cat:"文化"}, {lao:"ໂຮງລະຄອນ", zh:"剧院", cat:"文化"}, {lao:"ຮູບເງົາ", zh:"电影", cat:"文化"},
+    {lao:"ວັນນະຄະດີ", zh:"文学", cat:"文化"}, {lao:"ບົດກອນ", zh:"诗歌", cat:"文化"}, {lao:"ນັກຂຽນ", zh:"作者", cat:"文化"}, {lao:"ນັກຮ້ອງ", zh:"歌手", cat:"文化"},
+    {lao:"ດາລາ", zh:"明星", cat:"文化"}, {lao:"ການທ່ອງທ່ຽວ", zh:"旅游", cat:"文化"}, {lao:"ນັກທ່ອງທ່ຽວ", zh:"游客", cat:"文化"}, {lao:"ສະຖານທີ່", zh:"地点", cat:"文化"},
+    {lao:"ທິວທັດ", zh:"风景", cat:"文化"}, {lao:"ຮູບພາບ", zh:"照片", cat:"文化"}, {lao:"ວັດຖຸບູຮານ", zh:"古董/文物", cat:"文化"}, {lao:"ມໍລະດົກ", zh:"遗产", cat:"文化"},
+    {lao:"ພູສີ", zh:"普西山", cat:"文化"}, {lao:"ທົ່ງໄຫຫີນ", zh:"石缸平原", cat:"文化"}, {lao:"ສີ່ພັນດອນ", zh:"四千美岛", cat:"文化"}, {lao:"ວັດພູຈຳປາສັກ", zh:"瓦普庙", cat:"文化"},
+    {lao:"ຕະຫຼາດເຊົ້າ", zh:"早市", cat:"文化"}, {lao:"ຕະຫຼາດມືດ", zh:"夜市", cat:"文化"}, {lao:"ອາຫານແຄມທາງ", zh:"路边摊", cat:"文化"}, {lao:"ລົດຕຸກຕຸກ", zh:"突突车", cat:"文化"},
+    {lao:"ມິດຕະພາບ", zh:"友好/友谊", cat:"文化"}, {lao:"ອາຊຽນ", zh:"东盟", cat:"文化"}, {lao:"ສາກົນ", zh:"国际", cat:"文化"}, {lao:"ໂລກ", zh:"世界", cat:"文化"},
+    {lao:"ທ້ອງຟ້າ", zh:"天空", cat:"文化"}, {lao:"ພະອາທິດ", zh:"太阳", cat:"文化"}, {lao:"ພະຈັນ", zh:"月亮", cat:"文化"}, {lao:"ດາວ", zh:"星星", cat:"文化"},
+    {lao:"ດິນ", zh:"土地", cat:"文化"}, {lao:"ຫີນ", zh:"石头", cat:"文化"}, {lao:"ຄຳສອນ", zh:"教义", cat:"文化"}, {lao:"ຄວາມສະຫງົບ", zh:"宁静/安静", cat:"文化"},
+    {lao:"ຄວາມອົດທົນ", zh:"耐心", cat:"文化"}, {lao:"ຄວາມຊື່ສັດ", zh:"诚实", cat:"文化"}, {lao:"ຄວາມກະຕັນຍູ", zh:"感恩/孝顺", cat:"文化"}, {lao:"ຄອບຄົວ", zh:"家庭", cat:"文化"},
+    {lao:"ສາຍໃຍ", zh:"纽带/联系", cat:"文化"}, {lao:"ອະນຸລັກ", zh:"保护/保护区", cat:"文化"}, {lao:"ຊີວິດ", zh:"生活/生命", cat:"文化"}, {lao:"ຄວາມຫວັງ", zh:"希望", cat:"文化"},
+    {lao:"ຜູ້ນຳ", zh:"领导人", cat:"文化"}, {lao:"ລັດຖະທຳມະນູນ", zh:"宪法", cat:"文化"}, {lao:"ອະທິປະໄຕ", zh:"主权", cat:"文化"}, {lao:"ປະຊາຄົມ", zh:"共同体", cat:"文化"},
+    {lao:"ການທູດ", zh:"外交", cat:"文化"}, {lao:"ສັນຍາສັນຕິພາບ", zh:"和平协议", cat:"文化"}, {lao:"ເຂດແດນ", zh:"边界", cat:"文化"}, {lao:"ແຜນທີ່", zh:"地图", cat:"文化"},
+    {lao:"ຊັບພະຍາກອນ", zh:"资源", cat:"文化"}, {lao:"ສິ່ງແວດລ້ອມ", zh:"环境", cat:"文化"}, {lao:"ມົນລະພິດ", zh:"污染", cat:"文化"}, {lao:"ການອະນຸລັກ", zh:"保育", cat:"文化"},
+    {lao:"ໄພທຳມະຊາດ", zh:"自然灾害", cat:"文化"}, {lao:"ນ້ຳຖ້ວມ", zh:"洪水", cat:"文化"}, {lao:"ແຜ່ນດິນໄຫວ", zh:"地震", cat:"文化"}, {lao:"ໄຟໄໝ້ປ່າ", zh:"森林火灾", cat:"文化"},
+    {lao:"ໂລກຮ້ອນ", zh:"全球变暖", cat:"文化"}, {lao:"ພະລັງງານສະອາດ", zh:"清洁能源", cat:"文化"}, {lao:"ຄວາມຍືນຍົງ", zh:"可持续性", cat:"文化"}, {lao:"ການປ່ຽນແປງ", zh:"变化", cat:"文化"},
+    {lao:"ຄວາມແຕກຕ່າງ", zh:"差异", cat:"文化"}, {lao:"ຄວາມຫຼາກຫຼາຍ", zh:"多样性", cat:"文化"}, {lao:"ຄວາມເຊື່ອມໂຍງ", zh:"连接/整合", cat:"文化"}, {lao:"ໂລກາພິວັດ", zh:"全球化", cat:"文化"},
+    {lao:"ສິດທິມະນຸດ", zh:"人权", cat:"文化"}, {lao:"ຄວາມຍຸດຕິທຳ", zh:"正义", cat:"文化"}, {lao:"ຄວາມສະເໝີພາບ", zh:"平等", cat:"文化"}, {lao:"ເສລີພາບ", zh:"自由", cat:"文化"},
+    {lao:"ຄວາມທຸກຍາກ", zh:"贫困", cat:"文化"}, {lao:"ຄວາມຮັ່ງມີ", zh:"财富", cat:"文化"}, {lao:"ການພັດທະນາ", zh:"发展", cat:"文化"}, {lao:"ຄວາມກ້າວໜ້າ", zh:"进步", cat:"文化"},
+    {lao:"ການສຶກສາ", zh:"教育", cat:"文化"}, {lao:"ສາທາລະນະສຸກ", zh:"公共卫生", cat:"文化"}, {lao:"ສະຫວັດດີການ", zh:"福利", cat:"文化"}, {lao:"ຄວາມໝັ້ນຄົງ", zh:"安全感/保障", cat:"文化"},
+    {lao:"ນະວັດຕະກຳ", zh:"创新", cat:"文化"}, {lao:"ຄວາມຮູ້", zh:"知识", cat:"文化"}, {lao:"ປັນຍາ", zh:"智慧", cat:"文化"}, {lao:"ຄວາມຄິດສ້າງສັນ", zh:"创造力", cat:"文化"},
+    {lao:"ອຸດົມຄະຕິ", zh:"理想", cat:"文化"}, {lao:"ຄວາມຈິງ", zh:"真理", cat:"文化"}, {lao:"ປັດຊະຍາ", zh:"哲学", cat:"文化"}, {lao:"ຈັນຍາບັນ", zh:"伦理道德", cat:"文化"},
+    {lao:"ຄວາມເຫັນອົກເຫັນໃຈ", zh:"同情心", cat:"文化"}, {lao:"ການແບ່ງປັນ", zh:"分享", cat:"文化"}, {lao:"ການຊ່ວຍເຫຼືອ", zh:"援助", cat:"文化"}, {lao:"ຈິດອາສາ", zh:"志愿者", cat:"文化"},
+    {lao:"ໄຊຊະນະ", zh:"胜利", cat:"文化"}, {lao:"ຄວາມລົ້ມເຫຼວ", zh:"失败", cat:"文化"}, {lao:"ບົດຮຽນ", zh:"教训", cat:"文化"}, {lao:"ປະສົບການ", zh:"经验", cat:"文化"},
+    {lao:"ຄວາມພະຍາຍາມ", zh:"努力", cat:"文化"}, {lao:"ຄວາມອົດທົນ", zh:"毅力/耐力", cat:"文化"}, {lao:"ຄວາມກ້າຫານ", zh:"勇敢", cat:"文化"}, {lao:"ຄວາມເຊື່ອໝັ້ນ", zh:"自信", cat:"文化"},
+    {lao:"ຈຸດໝາຍ", zh:"目的地/宗旨", cat:"文化"}, {lao:"ຄວາມຝັນ", zh:"梦想", cat:"文化"}, {lao:"ແຮງບັນດານໃຈ", zh:"灵感", cat:"文化"}, {lao:"ຄວາມສຳເລັດ", zh:"成功", cat:"文化"},
+    // --- 生活进阶 (医疗、情感、居家) ---
+    {lao:"ຢາຂ້າເຊື້ອ", zh:"抗生素", cat:"生活"}, {lao:"ວັກຊີນ", zh:"疫苗", cat:"生活"}, {lao:"ຄວາມດັນເລືອດ", zh:"血压", cat:"生活"}, {lao:"ພະຍາດເບົາຫວານ", zh:"糖尿病", cat:"生活"},
+    {lao:"ອາການແພ້", zh:"过敏", cat:"生活"}, {lao:"ຜ່າຕັດ", zh:"手术", cat:"生活"}, {lao:"ໃບສັ່ງຢາ", zh:"处方", cat:"生活"}, {lao:"ປະກັນໄພສຸຂະພາບ", zh:"医保", cat:"生活"},
+    {lao:"ວິຕາມິນ", zh:"维生素", cat:"生活"}, {lao:"ສຸຂະພາບຈິດ", zh:"心理健康", cat:"生活"}, {lao:"ຄວາມກົດດັນ", zh:"压力", cat:"生活"}, {lao:"ອາລົມ", zh:"情绪", cat:"生活"},
+    {lao:"ຄວາມເຫງົາ", zh:"孤独", cat:"生活"}, {lao:"ຄວາມອົບອຸ່ນ", zh:"温暖", cat:"生活"}, {lao:"ຄວາມເຊື່ອໃຈ", zh:"信任", cat:"生活"}, {lao:"ການໃຫ້ອະໄພ", zh:"原谅", cat:"生活"},
+    {lao:"ເຄື່ອງຊັກຜ້າ", zh:"洗衣机", cat:"生活"}, {lao:"ເຄື່ອງດູດຝຸ່ນ", zh:"吸尘器", cat:"生活"}, {lao:"ໄມໂຄຣເວັບ", zh:"微波炉", cat:"生活"}, {lao:"ເຕົາອົບ", zh:"烤箱", cat:"生活"},
+    {lao:"ອິນເຕີເນັດໄຮ້ສາຍ", zh:"无线网", cat:"生活"}, {lao:"ລະຫັດຜ່ານ", zh:"密码", cat:"生活"}, {lao:"ສາກແບັດ", zh:"充电", cat:"生活"}, {lao:"ແບັດເຕີລີ", zh:"电池", cat:"生活"},
+    {lao:"ສ້ອມແປງເຮືອນ", zh:"房屋维修", cat:"生活"}, {lao:"ທາສີ", zh:"刷漆", cat:"生活"}, {lao:"ທໍ່ນ້ຳແຕກ", zh:"水管爆裂", cat:"生活"}, {lao:"ໄຟຟ້າລັດວົງຈອນ", zh:"电路短路", cat:"生活"},
+    {lao:"ການຕົບແຕ່ງ", zh:"装修", cat:"生活"}, {lao:"ເຟີນີເຈີ", zh:"家具", cat:"生活"}, {lao:"ສວນປູກຜັກ", zh:"菜园", cat:"生活"}, {lao:"ສັດລ້ຽງ", zh:"宠物", cat:"生活"},
+
+    // --- 工作进阶 (工程、商务、技术) ---
+    {lao:"ບົດວິພາກ", zh:"可行性研究", cat:"工作"}, {lao:"ການອອກແບບ", zh:"设计", cat:"工作"}, {lao:"ໂຄງສ້າງ", zh:"结构", cat:"工作"}, {lao:"ຮາກຖານ", zh:"地基", cat:"工作"},
+    {lao:"ເສົາເຂັມ", zh:"桩基", cat:"工作"}, {lao:"ຄອນກຣີດ", zh:"混凝土", cat:"工作"}, {lao:"ແບບຫຼໍ່", zh:"模板", cat:"工作"}, {lao:"ນັ່ງຮ້ານ", zh:"脚手架", cat:"工作"},
+    {lao:"ການວັດແທກ", zh:"测量", cat:"工作"}, {lao:"ລະດັບໜ້າດິນ", zh:"地面平整度", cat:"工作"}, {lao:"ລະບົບລະບາຍນ້ຳ", zh:"排水系统", cat:"工作"}, {lao:"ການປ້ອງກັນໄຟໄໝ້", zh:"防火", cat:"工作"},
+    {lao:"ກຳນົດເວລາ", zh:"工期/期限", cat:"工作"}, {lao:"ຄວາມຄືບໜ້າ", zh:"进度", cat:"工作"}, {lao:"ບົດບັນທຶກ", zh:"会议纪要", cat:"工作"}, {lao:"ການມອບຮັບ", zh:"验收交付", cat:"工作"},
+    {lao:"ຂໍ້ບົກພ່ອງ", zh:"缺陷/瑕疵", cat:"工作"}, {lao:"ການຮັບປະກັນ", zh:"保修/质保", cat:"工作"}, {lao:"ອາໄຫຼ່", zh:"配件/零件", cat:"工作"}, {lao:"ການບຳລຸງຮັກສາ", zh:"维护保养", cat:"工作"},
+    {lao:"ແຮງງານ", zh:"劳动力", cat:"工作"}, {lao:"ສະຫວັດດີການ", zh:"福利", cat:"工作"}, {lao:"ເງິນເບ້ຍລ້ຽງ", zh:"津贴/差旅费", cat:"工作"}, {lao:"ພາສີລາຍໄດ້", zh:"所得税", cat:"工作"},
+    {lao:"ການລົງທຶນ", zh:"投资", cat:"工作"}, {lao:"ຮຸ້ນ", zh:"股票/股份", cat:"工作"}, {lao:"ທຶນຈົດທະບຽນ", zh:"注册资本", cat:"工作"}, {lao:"ເງິນກູ້", zh:"贷款", cat:"工作"},
+    {lao:"ດອກເບ້ຍ", zh:"利息", cat:"工作"}, {lao:"ການຄ້ຳປະກັນ", zh:"担保", cat:"工作"}, {lao:"ການຊຳລະເງິນ", zh:"支付/结账", cat:"工作"}, {lao:"ໃບບິນອາກອນ", zh:"税务发票", cat:"工作"},
+    {lao:"ການເຈລະຈາ", zh:"谈判", cat:"工作"}, {lao:"ຄູ່ຮ່ວມງານ", zh:"合作伙伴", cat:"工作"}, {lao:"ການຕະຫຼາດອອນລາຍ", zh:"网络营销", cat:"工作"}, {lao:"ຖານຂໍ້ມູນ", zh:"数据库", cat:"工作"},
+    {lao:"ຊອບແວ", zh:"软件", cat:"工作"}, {lao:"ຮາດແວ", zh:"硬件", cat:"工作"}, {lao:"ຄວາມປອດໄພໄຊເບີ", zh:"网络安全", cat:"工作"}, {lao:"ປັນຍາປະດິດ", zh:"人工智能", cat:"工作"},
+
+    // --- 文化与行政进阶 (法律、社会、深度交流) ---
+    {lao:"ລັດຖະທຳມະນູນ", zh:"宪法", cat:"文化"}, {lao:"ກົດໝາຍແພ່ງ", zh:"民法", cat:"文化"}, {lao:"ກົດໝາຍອາຍາ", zh:"刑法", cat:"文化"}, {lao:"ລະບຽບການ", zh:"规章", cat:"文化"},
+    {lao:"ໃບອະນຸຍາດ", zh:"许可证", cat:"文化"}, {lao:"ການຈົດທະບຽນ", zh:"登记注册", cat:"文化"}, {lao:"ສິດທິມະນຸດ", zh:"人权", cat:"文化"}, {lao:"ປະຊາທິປະໄຕ", zh:"民主", cat:"文化"},
+    {lao:"ເອກະລາດ", zh:"独立", cat:"文化"}, {lao:"ອະທິປະໄຕ", zh:"主权", cat:"文化"}, {lao:"ຄວາມໝັ້ນຄົງ", zh:"国家安全", cat:"文化"}, {lao:"ການປ້ອງກັນຊາດ", zh:"国防", cat:"文化"},
+    {lao:"ນະໂຍບາຍ", zh:"政策", cat:"文化"}, {lao:"ຍຸດທະສາດ", zh:"战略", cat:"文化"}, {lao:"ແຜນພັດທະນາ", zh:"发展规划", cat:"文化"}, {lao:"ການຮ່ວມມືສາກົນ", zh:"国际合作", cat:"文化"},
+    {lao:"ອົງການຈັດຕັ້ງ", zh:"组织机构", cat:"文化"}, {lao:"ສະຫະປະຊາຊາດ", zh:"联合国", cat:"文化"}, {lao:"ອາຊຽນ", zh:"东盟", cat:"文化"}, {lao:"ສະຖານທູດ", zh:"大使馆", cat:"文化"},
+    {lao:"ເອກອັກຄະລັດຖະທູດ", zh:"特命全权大使", cat:"文化"}, {lao:"ກົງສຸນ", zh:"领事", cat:"文化"}, {lao:"ການທູດ", zh:"外交", cat:"文化"}, {lao:"ສົນທິສັນຍາ", zh:"条约", cat:"文化"},
+    {lao:"ມໍລະດົກໂລກ", zh:"世界遗产", cat:"文化"}, {lao:"ການອະນຸລັກ", zh:"保护/保育", cat:"文化"}, {lao:"ສິລະປະພື້ນເມືອງ", zh:"民间艺术", cat:"文化"}, {lao:"ວັນນະຄະດີ", zh:"文学", cat:"文化"},
+    {lao:"ປັດຊະຍາ", zh:"哲学", cat:"文化"}, {lao:"ຈັນຍາບັນ", zh:"职业道德", cat:"文化"}, {lao:"ຄວາມຍຸດຕິທຳ", zh:"正义/公正", cat:"文化"}, {lao:"ຄວາມສະເໝີພາບ", zh:"平等", cat:"文化"},
+
+    // --- 更多进阶动词与副词 (提升口语地道感) ---
+    {lao:"ຮັບຜິດຊອບ", zh:"负责", cat:"工作"}, {lao:"ສະໜັບສະໜູນ", zh:"支持", cat:"工作"}, {lao:"ແກ້ໄຂ", zh:"解决/修改", cat:"工作"}, {lao:"ປັບປຸງ", zh:"改进/完善", cat:"工作"},
+    {lao:"ຄົ້ນຄວ້າ", zh:"研究", cat:"工作"}, {lao:"ວິເຄາະ", zh:"分析", cat:"工作"}, {lao:"ສະຫຼຸບ", zh:"总结", cat:"工作"}, {lao:"ລາຍງານ", zh:"报告", cat:"工作"},
+    {lao:"ປະສານງານ", zh:"协调", cat:"工作"}, {lao:"ຈັດຕັ້ງ", zh:"组织/实施", cat:"工作"}, {lao:"ຄວບຄຸມ", zh:"控制/管理", cat:"工作"}, {lao:"ກວດສອບ", zh:"审计/核实", cat:"工作"},
+    {lao:"ອ້າງອີງ", zh:"参考/引用", cat:"工作"}, {lao:"ຢືນຢັນ", zh:"确认", cat:"工作"}, {lao:"ປະຕິເສດ", zh:"拒绝", cat:"工作"}, {lao:"ຍອມຮັບ", zh:"接受/承认", cat:"工作"},
+    {lao:"ແນ່ນອນ", zh:"当然/肯定", cat:"生活"}, {lao:"ອາດຈະ", zh:"可能", cat:"生活"}, {lao:"ບາງທີ", zh:"或许", cat:"生活"}, {lao:"ໂດຍສະເພາະ", zh:"特别是", cat:"生活"},
+    {lao:"ປົກກະຕິ", zh:"通常", cat:"生活"}, {lao:"ສະເໝີ", zh:"总是", cat:"生活"}, {lao:"ບາງຄັ້ງ", zh:"有时", cat:"生活"}, {lao:"ບໍ່ເຄີຍ", zh:"从不", cat:"生活"},
+    {lao:"ທັນທີ", zh:"立即", cat:"生活"}, {lao:"ຄ່ອຍໆ", zh:"慢慢地", cat:"生活"}, {lao:"ເກືອບ", zh:"几乎", cat:"生活"}, {lao:"ພຽງແຕ່", zh:"仅仅/只", cat:"生活"},
+// --- 生活细节类 (生活) ---
+    {lao:"ນ້ຳໝາກໄມ້", zh:"果汁", cat:"生活"}, {lao:"ນ້ຳອັດລົມ", zh:"汽水", cat:"生活"}, {lao:"ເຝີ", zh:"老挝粉", cat:"生活"}, {lao:"ແຈ່ວບອງ", zh:"辣酱", cat:"生活"},
+    {lao:"ຜົງຊັກຟອກ", zh:"洗衣粉", cat:"生活"}, {lao:"ນ້ຳຢາລ້າງຈານ", zh:"洗洁精", cat:"生活"}, {lao:"ຢາສະຜົມ", zh:"洗发露", cat:"生活"}, {lao:"ຄີມນວດ", zh:"护发素", cat:"生活"},
+    {lao:"ມີດແຖໜວດ", zh:"剃须刀", cat:"生活"}, {lao:"ຜ້າເຊັດຕົວ", zh:"浴巾", cat:"生活"}, {lao:"ໄມ້ຖູພື້ນ", zh:"拖把", cat:"生活"}, {lao:"ຟອຍກວາດເຮືອນ", zh:"扫帚", cat:"生活"},
+    {lao:"ຫຼອດໄຟ", zh:"灯管", cat:"生活"}, {lao:"ປລັກໄຟ", zh:"插座", cat:"生活"}, {lao:"ໝໍ້ຫຸງເຂົ້າ", zh:"电饭煲", cat:"生活"}, {lao:"ເຕົາລີດ", zh:"熨斗", cat:"生活"},
+    {lao:"ຜ້າສະອັດ", zh:"卫生巾", cat:"生活"}, {lao:"ຖົງຢາງ", zh:"塑料袋", cat:"生活"}, {lao:"ກະແຈ", zh:"钥匙", cat:"生活"}, {lao:"ແມ່ກຸນແຈ", zh:"锁", cat:"生活"},
+    {lao:"ປ່ອງຢ້ຽມ", zh:"窗户", cat:"生活"}, {lao:"ປະຕູ", zh:"门", cat:"生活"}, {lao:"ເພດານ", zh:"天花板", cat:"生活"}, {lao:"ພື້ນ", zh:"地板", cat:"生活"},
+    {lao:"ເດີ່ນເຮືອນ", zh:"院子", cat:"生活"}, {lao:"ຮົ້ວ", zh:"围栏", cat:"生活"}, {lao:"ຂັ້ນໄດ", zh:"楼梯", cat:"生活"}, {lao:"ລິຟ", zh:"电梯", cat:"生活"},
+    {lao:"ບ່ວງກາເຟ", zh:"咖啡勺", cat:"生活"}, {lao:"ກະຕິກນ້ຳ", zh:"热水瓶", cat:"生活"}, {lao:"ແກ້ວ", zh:"瓶子/玻璃", cat:"生活"}, {lao:"ຝາປິດ", zh:"盖子", cat:"生活"},
+    {lao:"ເສື້ອກັນຝົນ", zh:"雨衣", cat:"生活"}, {lao:"ເສື້ອກັນໜາວ", zh:"外套/毛衣", cat:"生活"}, {lao:"ສົງຂາສັ້ນ", zh:"短裤", cat:"生活"}, {lao:"ຜ້າພັນຄໍ", zh:"围巾", cat:"生活"},
+    {lao:"ຖົງຕີນ", zh:"袜子", cat:"生活"}, {lao:"ສາຍແອວ", zh:"腰带", cat:"生活"}, {lao:"ຕຸ້ມຫູ", zh:"耳环", cat:"生活"}, {lao:"ສ້ອຍຄໍ", zh:"项链", cat:"生活"},
+    {lao:"ແຫວນ", zh:"戒指", cat:"生活"}, {lao:"ໂມງ", zh:"手表/钟", cat:"生活"}, {lao:"ກະເປົາເງິນ", zh:"钱包", cat:"生活"}, {lao:"ເຄື່ອງສໍາອາງ", zh:"化妆品", cat:"生活"},
+
+    // --- 施工与专业类 (工作) ---
+    {lao:"ການວັດແທກ", zh:"测量", cat:"工作"}, {lao:"ລະດັບນ້ຳ", zh:"水平仪", cat:"工作"}, {lao:"ຕາແມັດ", zh:"平方米", cat:"工作"}, {lao:"ແມັດກ້ອນ", zh:"立方米", cat:"工作"},
+    {lao:"ເສັ້ນຜ່າສູນກາງ", zh:"直径", cat:"工作"}, {lao:"ຄວາມໜາ", zh:"厚度", cat:"工作"}, {lao:"ຄວາມກວ້າງ", zh:"宽度", cat:"工作"}, {lao:"ຄວາມຍາວ", zh:"长度", cat:"工作"},
+    {lao:"ຮາກຖານ", zh:"地基", cat:"工作"}, {lao:"ເສົາ", zh:"柱子", cat:"工作"}, {lao:"ຄານ", zh:"大梁", cat:"工作"}, {lao:"ຫຼັງຄາ", zh:"屋顶", cat:"工作"},
+    {lao:"ຝາຜະໜັງ", zh:"墙壁", cat:"工作"}, {lao:"ການທາສີ", zh:"油漆工程", cat:"工作"}, {lao:"ສີຮອງພື້ນ", zh:"底漆", cat:"工作"}, {lao:"ແປງທາສີ", zh:"刷子", cat:"工作"},
+    {lao:"ການຕິດຕັ້ງ", zh:"安装", cat:"工作"}, {lao:"ການສ້ອມບຳລຸງ", zh:"维保", cat:"工作"}, {lao:"ອາໄຫຼ່", zh:"配件/零件", cat:"工作"}, {lao:"ນ້ຳມັນເຄື່ອງ", zh:"机油", cat:"工作"},
+    {lao:"ລົດບັນທຸກ", zh:"卡车", cat:"工作"}, {lao:"ລົດເທລໍ່", zh:"拖车", cat:"工作"}, {lao:"ລົດເຄນ", zh:"吊车", cat:"工作"}, {lao:"ລົດໂມ້ຊີມັງ", zh:"搅拌车", cat:"工作"},
+    {lao:"ຊ້ວນ", zh:"铲子", cat:"工作"}, {lao:"ຈົກ", zh:"锄头", cat:"工作"}, {lao:"ຄ້ອນຕີ", zh:"锤子", cat:"工作"}, {lao:"ສະຫວ່ານ", zh:"电钻", cat:"工作"},
+    {lao:"ຕະປູ", zh:"钉子", cat:"工作"}, {lao:"ສະກູ", zh:"螺丝", cat:"工作"}, {lao:"ກະແຈປາກຕາຍ", zh:"扳手", cat:"工作"}, {lao:"ຄີມ", zh:"钳子", cat:"工作"},
+    {lao:"ເຄື່ອງປັ່ນໄຟ", zh:"发电机", cat:"工作"}, {lao:"ໝໍ້ແປງໄຟ", zh:"变压器", cat:"工作"}, {lao:"ຕູ້ຄວບຄຸມ", zh:"控制柜", cat:"工作"}, {lao:"ເບຣກເກີ", zh:"断路器", cat:"工作"},
+    {lao:"ຖັງນ້ຳມັນ", zh:"油桶/油箱", cat:"工作"}, {lao:"ທໍ່ນ້ຳ", zh:"水管", cat:"工作"}, {lao:"ວາວນ້ຳ", zh:"水阀", cat:"工作"}, {lao:"ປ້ຳນ້ຳ", zh:"水泵", cat:"工作"},
+    {lao:"ບົດບັນທຶກ", zh:"会议纪要", cat:"工作"}, {lao:"ໃບສະເໜີ", zh:"申请单", cat:"工作"}, {lao:"ໃບສັ່ງຊື້", zh:"采购单", cat:"工作"}, {lao:"ໃບເກັບເງິນ", zh:"发票", cat:"工作"},
+
+    // --- 民俗与地道类 (文化) ---
+    {lao:"ພິທີສົມລົດ", zh:"婚礼", cat:"文化"}, {lao:"ເຈົ້າບ່າວ", zh:"新郎", cat:"文化"}, {lao:"ເຈົ້າສາວ", zh:"新娘", cat:"文化"}, {lao:"ຄ່າດອງ", zh:"彩礼", cat:"文化"},
+    {lao:"ສູ່ຂວັນ", zh:"祈福仪式", cat:"文化"}, {lao:"ໝໍພອນ", zh:"仪式主持人", cat:"文化"}, {lao:"ຄາຍ", zh:"祭祀礼金", cat:"文化"}, {lao:"ຫໍຜີ", zh:"灵龛", cat:"文化"},
+    {lao:"ບຸນກິນຈຽງ", zh:"苗族新年", cat:"文化"}, {lao:"ບຸນທາດຫຼວງ", zh:"塔銮节", cat:"文化"}, {lao:"ບຸນອອກພັນສາ", zh:"出腊节", cat:"文化"}, {lao:"ບຸນຫໍ່ເຂົ້າສະຫຼາກ", zh:"祭亡灵节", cat:"文化"},
+    {lao:"ໄຫຼເຮືອໄຟ", zh:"流灯船", cat:"文化"}, {lao:"ລອຍກະທົງ", zh:"放水灯", cat:"文化"}, {lao:"ຕັກບາດ", zh:"化缘", cat:"文化"}, {lao:"ຢາດນ້ຳ", zh:"滴水功德", cat:"文化"},
+    {lao:"ວັດຖຸມຸງຄຸນ", zh:"吉祥物", cat:"文化"}, {lao:"ພະເຄື່ອງ", zh:"佛牌", cat:"文化"}, {lao:"ສິນຫ້າ", zh:"五戒", cat:"文化"}, {lao:"ພາວະນາ", zh:"冥想", cat:"文化"},
+    {lao:"ລາຍນ້ຳໄຫຼ", zh:"流水纹", cat:"文化"}, {lao:"ລາຍນາກ", zh:"纳迦纹", cat:"文化"}, {lao:"ຕ່ຳແຜ່ນ", zh:"纺织", cat:"文化"}, {lao:"ກີ່", zh:"织布机", cat:"文化"},
+    {lao:"ສີມື", zh:"手艺", cat:"文化"}, {lao:"ເຄື່ອງຈັກສານ", zh:"竹编工艺", cat:"文化"}, {lao:"ໄມ້ໄຜ່", zh:"竹子", cat:"文化"}, {lao:"ຫວາຍ", zh:"藤条", cat:"文化"},
+    {lao:"ເພງພື້ນເມືອງ", zh:"民歌", cat:"文化"}, {lao:"ຂັບລຳ", zh:"说唱艺术", cat:"文化"}, {lao:"ລຳວົງ", zh:"团圆舞", cat:"文化"}, {lao:"ນາງງາມ", zh:"选美小姐", cat:"文化"},
+    {lao:"ອາຫານພື້ນບ້ານ", zh:"特色菜", cat:"文化"}, {lao:"ເຂົ້າຫຼາມ", zh:"竹筒饭", cat:"文化"}, {lao:"ໝົກປາ", zh:"芭蕉叶蒸鱼", cat:"文化"}, {lao:"ໄສ້ອົ່ວ", zh:"老挝香肠", cat:"文化"},
+    {lao:"ຕໍາໝາກຖົ່ວ", zh:"凉拌豆角", cat:"文化"}, {lao:"ແກງໜໍ່ໄມ້", zh:"竹笋汤", cat:"文化"}, {lao:"ຜັກຕິ້ວ", zh:"老挝酸叶", cat:"文化"}, {lao:"ແຈ່ວສົ້ມ", zh:"酸辣酱", cat:"文化"},
+    {lao:"ສະຖານທີ່ທ່ອງທ່ຽວ", zh:"旅游景点", cat:"文化"}, {lao:"ທ່ຽວຊົມ", zh:"参观", cat:"文化"}, {lao:"ຜູ້ນຳທ່ຽວ", zh:"导游", cat:"文化"}, {lao:"ເມືອງມໍລະດົກໂລກ", zh:"世界遗产城", cat:"文化"},
+    // --- 商务与法律 (工作) ---
+    {lao:"ຮ່າງສັນຍາ", zh:"起草合同", cat:"工作"}, {lao:"ຂໍ້ກຳນົດ", zh:"条款/规定", cat:"工作"}, {lao:"ກົດລະບຽບພາຍໃນ", zh:"内部规章", cat:"工作"}, {lao:"ການລະເມີດສັນຍາ", zh:"违约", cat:"工作"},
+    {lao:"ຄ່າປັບໃໝ", zh:"罚款/违约金", cat:"工作"}, {lao:"ການຍົກເລີກ", zh:"取消/撤销", cat:"工作"}, {lao:"ຕົວແທນ", zh:"代理人", cat:"工作"}, {lao:"ຫຸ້ນສ່ວນ", zh:"股东/合伙人", cat:"工作"},
+    {lao:"ການລົງທຶນໂດຍກົງ", zh:"直接投资", cat:"工作"}, {lao:"ໃບອະນຸຍາດລົງທຶນ", zh:"投资许可证", cat:"工作"}, {lao:"ເຂດເສດຖະກິດພິເສດ", zh:"特区", cat:"工作"}, {lao:"ການສໍາປະທານ", zh:"特许经营/特许权", cat:"工作"},
+    {lao:"ການປະມູນ", zh:"招标/投标", cat:"工作"}, {lao:"ຊອງປະມູນ", zh:"标书", cat:"工作"}, {lao:"ລາຄາກາງ", zh:"基准价", cat:"工作"}, {lao:"ການເຈລະຈາ", zh:"协商/谈判", cat:"工作"},
+    {lao:"ຂໍ້ຕົກລົງ", zh:"协议/决定", cat:"工作"}, {lao:"ການຮັບຮອງ", zh:"公证/认可", cat:"工作"}, {lao:"ກົດໝາຍແຮງງານ", zh:"劳动法", cat:"工作"}, {lao:"ການຟ້ອງຮ້ອງ", zh:"诉讼", cat:"工作"},
+
+    // --- 财务与会计 (工作) ---
+    {lao:"ໃບແຈ້ງໜີ້", zh:"账单/欠款通知", cat:"工作"}, {lao:"ໃບຮັບເງິນ", zh:"收据", cat:"工作"}, {lao:"ອາກອນມູນຄ່າເພີ່ມ", zh:"增值税", cat:"工作"}, {lao:"ອາກອນລາຍໄດ້", zh:"所得税", cat:"工作"},
+    {lao:"ການປິດບັນຊີ", zh:"结账/封账", cat:"工作"}, {lao:"ຍອດເຫຼືອ", zh:"余额", cat:"工作"}, {lao:"ລາຍຮັບ", zh:"收入", cat:"工作"}, {lao:"ລາຍຈ່າຍ", zh:"支出", cat:"工作"},
+    {lao:"ງົບປະມານ", zh:"预算", cat:"工作"}, {lao:"ເງິນສົດ", zh:"现金", cat:"工作"}, {lao:"ເງິນໂອນ", zh:"转账资金", cat:"工作"}, {lao:"ແຊັກທະນາຄານ", zh:"支票", cat:"工作"},
+    {lao:"ດອກເບ້ຍເງິນຝາກ", zh:"存款利息", cat:"工作"}, {lao:"ເງິນກູ້", zh:"贷款", cat:"工作"}, {lao:"ຫຼັກຊັບຄໍ້າປະກັນ", zh:"抵押物", cat:"工作"}, {lao:"ການຟອກເງິນ", zh:"洗钱", cat:"工作"},
+    {lao:"ລາຍງານການເງິນ", zh:"财务报告", cat:"工作"}, {lao:"ການກວດສອບພາຍໃນ", zh:"内审", cat:"工作"}, {lao:"ເງິນມັດຈຳ", zh:"定金/押金", cat:"工作"}, {lao:"ເງິນເບ້ຍລ້ຽງ", zh:"津贴/差旅费", cat:"工作"},
+
+    // --- 机械、工具与配件 (工作) ---
+    {lao:"ລູກປືນ", zh:"轴承", cat:"工作"}, {lao:"ເຟືອງ", zh:"齿轮", cat:"工作"}, {lao:"ສາຍພານ", zh:"皮带", cat:"工作"}, {lao:"ໂສ້", zh:"链条", cat:"工作"},
+    {lao:"ນັອດ", zh:"螺栓", cat:"工作"}, {lao:"ຫົວທຽນ", zh:"火花塞", cat:"工作"}, {lao:"ໝໍ້ໄຟ", zh:"蓄电池", cat:"工作"}, {lao:"ໄດສະຕາດ", zh:"启动机", cat:"工作"},
+    {lao:"ໝໍ້ໝ້ານ້ຳ", zh:"水箱", cat:"工作"}, {lao:"ພັດລົມລະບາຍອາກາດ", zh:"排风扇", cat:"工作"}, {lao:"ເຄື່ອງອັດອາກາດ", zh:"空压机", cat:"工作"}, {lao:"ປ້ຳໄຮໂດຼລິກ", zh:"液压泵", cat:"工作"},
+    {lao:"ສາຍໄຮໂດຼລິກ", zh:"液压油管", cat:"工作"}, {lao:"ຖັງດັບເພີງ", zh:"灭火器", cat:"工作"}, {lao:"ໄຟສັນຍານ", zh:"信号灯", cat:"工作"}, {lao:"ກະດິ່ງ", zh:"警铃", cat:"工作"},
+    {lao:"ຂັ້ນໄດເລື່ອນ", zh:"自动扶梯", cat:"工作"}, {lao:"ລວດເຊືອກ", zh:"钢丝绳", cat:"工作"}, {lao:"ຕະປູກຽວ", zh:"自攻螺丝", cat:"工作"}, {lao:"ກາວ", zh:"胶水", cat:"工作"},
+
+    // --- 医疗、健康与安全 (生活/工作) ---
+    {lao:"ຄລີນິກ", zh:"诊所", cat:"生活"}, {lao:"ຫ້ອງສຸກເສີນ", zh:"急诊室", cat:"生活"}, {lao:"ລົດກູ້ໄພ", zh:"救护车", cat:"生活"}, {lao:"ການຜ່າຕັດ", zh:"手术", cat:"生活"},
+    {lao:"ຢາຂ້າເຊື້ອ", zh:"消毒药/抗生素", cat:"生活"}, {lao:"ນ້ຳຢາລ້າງແຜ", zh:"洗伤口药水", cat:"生活"}, {lao:"ຜ້າພັນແຜ", zh:"绷带", cat:"生活"}, {lao:"ພລາສເຕີ", zh:"创可贴", cat:"生活"},
+    {lao:"ການກວດເລືອດ", zh:"验血", cat:"生活"}, {lao:"ຄວາມດັນເລືອດ", zh:"血压", cat:"生活"}, {lao:"ພະຍາດເບົາຫວານ", zh:"糖尿病", cat:"生活"}, {lao:"ອາການແພ້", zh:"过敏", cat:"生活"},
+    {lao:"ຢາແກ້ປວດ", zh:"止痛药", cat:"生活"}, {lao:"ຢາແກ້ໄອ", zh:"止咳药", cat:"生活"}, {lao:"ວິຕາມິນ", zh:"维生素", cat:"生活"}, {lao:"ຜ້າປິດປາກ", zh:"口罩", cat:"生活"},
+    {lao:"ການປະກັນໄພສຸຂະພາບ", zh:"医疗保险", cat:"工作"}, {lao:"ກວດສຸຂະພາບ", zh:"体检", cat:"工作"}, {lao:"ວັກຊີນ", zh:"疫苗", cat:"生活"}, {lao:"ພິດ", zh:"毒素", cat:"生活"},
+
+    // --- 地道社交与修饰 (生活) ---
+    {lao:"ບໍ່ເປັນຫຍັງ", zh:"没关系/不用谢", cat:"生活"}, {lao:"ໂຊກດີເດີ້", zh:"祝你好运", cat:"生活"}, {lao:"ເດີນທາງປອດໄພ", zh:"一路平安", cat:"生活"}, {lao:"ກິນເຂົ້າແລ້ວບໍ່", zh:"吃了吗", cat:"生活"},
+    {lao:"ລົມກັນໃໝ່", zh:"下次再聊", cat:"生活"}, {lao:"ຝັນດີ", zh:"晚安/好梦", cat:"生活"}, {lao:"ຄິດຄືກັນ", zh:"英雄所见略同/想法一样", cat:"生活"}, {lao:"ແນ່ນອນ", zh:"当然", cat:"生活"},
+    {lao:"ອາດຈະ", zh:"可能", cat:"生活"}, {lao:"ບາງທີ", zh:"或许", cat:"生活"}, {lao:"ຈິງໆ", zh:"真的", cat:"生活"}, {lao:"ຂີ້ຕີ້", zh:"吝啬", cat:"生活"},
+    {lao:"ໃຈກວ້າງ", zh:"大方/慷慨", cat:"生活"}, {lao:"ໃຈຮ້ອນ", zh:"脾气急", cat:"生活"}, {lao:"ໃຈເຢັນໆ", zh:"冷静点", cat:"生活"}, {lao:"ອົດທົນ", zh:"忍耐/耐心", cat:"生活"},
+ // --- 行政与政府 (工作) ---
+    {lao:"ສຳນັກງານນາຍົກ", zh:"总理府", cat:"工作"}, {lao:"ກົມ", zh:"局/司", cat:"工作"}, {lao:"ພະແນກ", zh:"处/科/厅", cat:"工作"}, {lao:"ຫ້ອງການບ້ານ", zh:"村委会", cat:"工作"},
+    {lao:"ເຈົ້າແຂວງ", zh:"省长", cat:"工作"}, {lao:"ເຈົ້າເມືອງ", zh:"县长", cat:"工作"}, {lao:"ນາຍບ້ານ", zh:"村长", cat:"工作"}, {lao:"ການເມືອງ", zh:"政治", cat:"工作"},
+    {lao:"ສະພາແຫ່ງຊາດ", zh:"国会", cat:"工作"}, {lao:"ລັດຖະທຳມະນູນ", zh:"宪法", cat:"工作"}, {lao:"ການເລືອກຕັ້ງ", zh:"选举", cat:"工作"}, {lao:"ນະໂຍບາຍ", zh:"政策", cat:"工作"},
+    {lao:"ຄວາມສະຫງົບ", zh:"治安/安宁", cat:"工作"}, {lao:"ສານ", zh:"法院", cat:"工作"}, {lao:"ໄອຍະການ", zh:"检察院", cat:"工作"}, {lao:"ທະບຽນວິສາຫະກິດ", zh:"营业执照", cat:"工作"},
+    {lao:"ໃບຢັ້ງຢືນທີ່ຢູ່", zh:"居住证明", cat:"工作"}, {lao:"ສາມະໂນຄົວ", zh:"户口本", cat:"工作"}, {lao:"ບັດປະຈຳຕົວ", zh:"身份证", cat:"工作"}, {lao:"ການແຈ້ງເຂົ້າ", zh:"报备/入住登记", cat:"工作"},
+
+    // --- 自然地理与气象 (生活) ---
+    {lao:"ແມ່ນ້ຳຂອງ", zh:"湄公河", cat:"生活"}, {lao:"ສາຍພູ", zh:"山脉", cat:"生活"}, {lao:"ພູເຂົາໄຟ", zh:"火山", cat:"生活"}, {lao:"ທົ່ງພຽງ", zh:"平原", cat:"生活"},
+    {lao:"ພູດອຍ", zh:"高原/山区", cat:"生活"}, {lao:"ເກາະ", zh:"岛屿", cat:"生活"}, {lao:"ຊາຍແດນ", zh:"边境", cat:"生活"}, {lao:"ຊັບພະຍາກອນທຳມະຊາດ", zh:"自然资源", cat:"生活"},
+    {lao:"ສິ່ງແວດລ້ອມ", zh:"环境", cat:"生活"}, {lao:"ມົນລະພິດ", zh:"污染", cat:"生活"}, {lao:"ຂີ້ຝຸ່ນ", zh:"灰尘", cat:"生活"}, {lao:"ໝອກ", zh:"雾", cat:"生活"},
+    {lao:"ແຜ່ນດິນໄຫວ", zh:"地震", cat:"生活"}, {lao:"ນ້ຳຖ້ວມ", zh:"水灾/淹水", cat:"生活"}, {lao:"ໄຟໄໝ້ປ່າ", zh:"森林火灾", cat:"生活"}, {lao:"ລະດູແລ້ງ", zh:"旱季", cat:"生活"},
+    {lao:"ລະດູຝົນ", zh:"雨季", cat:"生活"}, {lao:"ລະດູໜາວ", zh:"凉季/冬季", cat:"生活"}, {lao:"ອຸນຫະພູມ", zh:"温度", cat:"生活"}, {lao:"ຄວາມຊຸ່ມ", zh:"湿度", cat:"生活"},
+
+    // --- 居家与生活设施 (生活) ---
+    {lao:"ເຄື່ອງຊັກຜ້າ", zh:"洗衣机", cat:"生活"}, {lao:"ເຄື່ອງດູດຝຸ່ນ", zh:"吸尘器", cat:"生活"}, {lao:"ເຕົາອົບ", zh:"烤箱", cat:"生活"}, {lao:"ໄມໂຄຣເວັບ", zh:"微波炉", cat:"生活"},
+    {lao:"ໝໍ້ຕົ້ມນ້ຳຮ້ອນ", zh:"电热水壶", cat:"生活"}, {lao:"ເຄື່ອງກອງນ້ຳ", zh:"净水器", cat:"生活"}, {lao:"ຝັກບົວ", zh:"花洒", cat:"生活"}, {lao:"ອ່າງລ້າງໜ້າ", zh:"洗脸池", cat:"生活"},
+    {lao:"ໂຖຊັກໂຄກ", zh:"马桶", cat:"生活"}, {lao:"ກະຈົກ", zh:"镜子", cat:"生活"}, {lao:"ຜ້າມ່ານ", zh:"窗帘", cat:"生活"}, {lao:"ຜ້າເຊັດຕີນ", zh:"地垫", cat:"生活"},
+    {lao:"ໂຊຟາ", zh:"沙发", cat:"生活"}, {lao:"ໂຕະກິນເຂົ້າ", zh:"餐桌", cat:"生活"}, {lao:"ຕູ້ເສື້ອຜ້າ", zh:"衣柜", cat:"生活"}, {lao:"ຊັ້ນວາງຂອງ", zh:"置物架", cat:"生活"},
+    {lao:"ໄມ້ແຂວນເສື້ອ", zh:"衣架", cat:"生活"}, {lao:"ເຂັມ", zh:"针", cat:"生活"}, {lao:"ດ້າຍ", zh:"线", cat:"生活"}, {lao:"ມີດຕັດ", zh:"剪刀", cat:"生活"},
+
+    // --- 高频动作与动词短语 (生活/工作) ---
+    {lao:"ຊອກຫາ", zh:"寻找", cat:"生活"}, {lao:"ລໍຖ້າ", zh:"等待", cat:"生活"}, {lao:"ຕັດສິນໃຈ", zh:"决定", cat:"工作"}, {lao:"ແນະນຳ", zh:"推荐/介绍", cat:"生活"},
+    {lao:"ປ່ຽນແປງ", zh:"改变", cat:"工作"}, {lao:"ປັບປຸງ", zh:"改进/装修", cat:"工作"}, {lao:"ຈັດການ", zh:"管理/处理", cat:"工作"}, {lao:"ວາງແຜນ", zh:"计划", cat:"工作"},
+    {lao:"ຕິດຕໍ່", zh:"联系", cat:"工作"}, {lao:"ຕິດຕາມ", zh:"跟踪/跟进", cat:"工作"}, {lao:"ກວດສອບ", zh:"检查/核对", cat:"工作"}, {lao:"ຢັ້ງຢືນ", zh:"确认/证实", cat:"工作"},
+    {lao:"ປະຕິເສດ", zh:"拒绝", cat:"工作"}, {lao:"ຍອມຮັບ", zh:"接受", cat:"生活"}, {lao:"ພະຍາຍາມ", zh:"努力/尝试", cat:"生活"}, {lao:"ອະທິບາຍ", zh:"解释", cat:"工作"},
+    {lao:"ສັນຍາ", zh:"承诺/合同", cat:"生活"}, {lao:"ລົງທະບຽນ", zh:"注册", cat:"工作"}, {lao:"ຈອງ", zh:"预订", cat:"生活"}, {lao:"ຍົກເລີກ", zh:"取消", cat:"生活"},
+    {lao:"ແບ່ງປັນ", zh:"分享", cat:"生活"}, {lao:"ຊ່ວຍເຫຼືອ", zh:"协助/帮助", cat:"生活"}, {lao:"ບໍລິຈາກ", zh:"捐赠", cat:"文化"}, {lao:"ສະໜັບສະໜູນ", zh:"支持", cat:"工作"},
+
+    // --- 抽象与逻辑表达 (文化) ---
+    {lao:"ຄວາມຈິງ", zh:"真相/事实", cat:"文化"}, {lao:"ຄວາມຄິດ", zh:"思想/想法", cat:"文化"}, {lao:"ຄວາມຫວັງ", zh:"希望", cat:"文化"}, {lao:"ຄວາມຝັນ", zh:"梦想", cat:"文化"},
+    {lao:"ເຫດຜົນ", zh:"理由/原因", cat:"文化"}, {lao:"ຜົນປະໂຫຍດ", zh:"利益/好处", cat:"工作"}, {lao:"ຄວາມແຕກຕ່າງ", zh:"区别/不同", cat:"文化"}, {lao:"ຄຸນຄ່າ", zh:"价值", cat:"文化"},
+    {lao:"ມາດຕະຖານ", zh:"标准", cat:"工作"}, {lao:"ຄຸນນະພາບ", zh:"质量", cat:"工作"}, {lao:"ປະສິດທິພາບ", zh:"效率", cat:"工作"}, {lao:"ປະສົບການ", zh:"经验", cat:"工作"},
+    {lao:"ຄວາມສາມາດ", zh:"能力", cat:"工作"}, {lao:"ຄວາມພະຍາຍາມ", zh:"努力", cat:"工作"}, {lao:"ຄວາມສຳເລັດ", zh:"成功", cat:"工作"}, {lao:"ຄວາມຫຼົ້ມເຫຼວ", zh:"失败", cat:"工作"},
+    // --- 语气、连接与虚词 (文化/生活) ---
+    {lao:"ແລະ", zh:"和/而且", cat:"文化"}, {lao:"ຫຼື", zh:"或者", cat:"文化"}, {lao:"ແຕ່", zh:"但是", cat:"文化"}, {lao:"ເພາະວ່າ", zh:"因为", cat:"文化"},
+    {lao:"ດັ່ງນັ້ນ", zh:"所以", cat:"文化"}, {lao:"ຖ້າວ່າ", zh:"如果", cat:"文化"}, {lao:"ເຖິງວ່າ", zh:"尽管", cat:"文化"}, {lao:"ໃນເວລານີ້", zh:"此时", cat:"文化"},
+    {lao:"ສຸດທ້າຍ", zh:"最后", cat:"文化"}, {lao:"ທັງໝົດ", zh:"全部", cat:"文化"}, {lao:"ບາງຄົນ", zh:"有些人", cat:"文化"}, {lao:"ທຸກຄົນ", zh:"每个人", cat:"文化"},
+    {lao:"ແທ້ເດ", zh:"真的哦(语气词)", cat:"文化"}, {lao:"ແມ່ນບໍ່", zh:"对吗", cat:"文化"}, {lao:"ບໍ", zh:"吗(疑问)", cat:"文化"}, {lao:"ເດີ້", zh:"语气助词(恳请/叮嘱)", cat:"文化"},
+
+    // --- 动物与植物 (生活/文化) ---
+    {lao:"ຄວາຍ", zh:"水牛", cat:"生活"}, {lao:"ງົວ", zh:"黄牛", cat:"生活"}, {lao:"ໝາ", zh:"狗", cat:"生活"}, {lao:"ແມວ", zh:"猫", cat:"生活"},
+    {lao:"ໝູ", zh:"猪", cat:"生活"}, {lao:"ເປັດ", zh:"鸭", cat:"生活"}, {lao:"ຫານ", zh:"鹅", cat:"生活"}, {lao:"ມ້າ", zh:"马", cat:"生活"},
+    {lao:"ແບ້", zh:"山羊", cat:"生活"}, {lao:"ລີງ", zh:"猴子", cat:"生活"}, {lao:"ງູ", zh:"蛇", cat:"生活"}, {lao:"ນົກ", zh:"鸟", cat:"生活"},
+    {lao:"ເສືອ", zh:"老虎", cat:"生活"}, {lao:"ສິງ", zh:"狮子", cat:"生活"}, {lao:"ກະຕ່າຍ", zh:"兔子", cat:"生活"}, {lao:"ໜູ", zh:"老鼠", cat:"生活"},
+    {lao:"ຍຸງ", zh:"蚊子", cat:"生活"}, {lao:"ແມງວັນ", zh:"苍蝇", cat:"生活"}, {lao:"ມົດ", zh:"蚂蚁", cat:"生活"}, {lao:"ແມງໄມ້", zh:"昆虫", cat:"生活"},
+    {lao:"ຕົ້ນໄມ້", zh:"树木", cat:"生活"}, {lao:"ດອກໄມ້", zh:"花", cat:"生活"}, {lao:"ຫຍ້າ", zh:"草", cat:"生活"}, {lao:"ປ່າ", zh:"森林", cat:"生活"},
+
+    // --- 体育、娱乐与学科 (文化/工作) ---
+    {lao:"ເຕະບານ", zh:"足球", cat:"文化"}, {lao:"ບານບ້ວງ", zh:"篮球", cat:"文化"}, {lao:"ຕີບານ", zh:"排球", cat:"文化"}, {lao:"ລອຍນ້ຳ", zh:"游泳", cat:"文化"},
+    {lao:"ແລ່ນ", zh:"跑步", cat:"文化"}, {lao:"ອອກກຳລັງກາຍ", zh:"锻炼", cat:"文化"}, {lao:"ແຂ່ງຂັນ", zh:"比赛", cat:"文化"}, {lao:"ຊະນະ", zh:"赢", cat:"文化"},
+    {lao:"ເສຍ", zh:"输/丢", cat:"文化"}, {lao:"ສະເໝີ", zh:"平局", cat:"文化"}, {lao:"ສິລະປະ", zh:"艺术", cat:"文化"}, {lao:"ວິທະຍາສາດ", zh:"科学", cat:"工作"},
+    {lao:"ຄະນິດສາດ", zh:"数学", cat:"工作"}, {lao:"ພາສາອັງກິດ", zh:"英语", cat:"工作"}, {lao:"ພູມສາດ", zh:"地理", cat:"工作"}, {lao:"ເສດຖະສາດ", zh:"经济学", cat:"工作"},
+
+    // --- 形容词进阶 (生活/文化) ---
+    {lao:"ສະຫຼາດ", zh:"聪明", cat:"生活"}, {lao:"ໂງ່", zh:"笨", cat:"生活"}, {lao:"ຂີ້ຄ້ານ", zh:"懒惰", cat:"生活"}, {lao:"ດຸໝັ່ນ", zh:"勤奋", cat:"生活"},
+    {lao:"ສຸພາບ", zh:"礼貌", cat:"生活"}, {lao:"ຫຍາບຄາຍ", zh:"粗鲁", cat:"生活"}, {lao:"ຮັ່ງມີ", zh:"富有", cat:"生活"}, {lao:"ທຸກຍາກ", zh:"贫穷", cat:"生活"},
+    {lao:"ແຄບ", zh:"窄", cat:"生活"}, {lao:"ກວ້າງ", zh:"宽", cat:"生活"}, {lao:"ເລິກ", zh:"深", cat:"生活"}, {lao:"ຕື້ນ", zh:"浅", cat:"生活"},
+    {lao:"ມືດ", zh:"暗/黑", cat:"生活"}, {lao:"ແຈ້ງ", zh:"亮/清楚", cat:"生活"}, {lao:"ຊື່ສັດ", zh:"诚实", cat:"文化"}, {lao:"ຂີ້ຕົວະ", zh:"撒谎", cat:"生活"},
+    {lao:"ແຫ້ງ", zh:"干", cat:"生活"}, {lao:"ປຽກ", zh:"湿", cat:"生活"}, {lao:"ໃໝ່", zh:"新", cat:"生活"}, {lao:"ເກົ່າ", zh:"旧", cat:"生活"},
+
+    // --- 地道口语与常用语短语 (生活) ---
+    {lao:"ຕາມໃຈ", zh:"随你便", cat:"生活"}, {lao:"ແລ້ວແຕ່", zh:"取决于/随便", cat:"生活"}, {lao:"ຢ່າຟ້າວ", zh:"别急", cat:"生活"}, {lao:"ໄວໆແດ່", zh:"快一点", cat:"生活"},
+    {lao:"ເປັນຕາຮັກ", zh:"可爱", cat:"生活"}, {lao:"ເປັນຕາຢ້ານ", zh:"可怕", cat:"生活"}, {lao:"ເປັນຕາເບື່ອ", zh:"无聊", cat:"生活"}, {lao:"ບໍ່ເປັນຫຍັງ", zh:"没关系", cat:"生活"},
+    {lao:"ສຸດຍອດ", zh:"棒极了", cat:"生活"}, {lao:"ໂພດ", zh:"太...了(程度)", cat:"生活"}, {lao:"ຫຼາຍເກີນໄປ", zh:"太多了", cat:"生活"}, {lao:"ພໍແລ້ວ", zh:"够了", cat:"生活"},
+    {lao:"ພະຍາຍາມໃໝ່", zh:"再试一次", cat:"生活"}, {lao:"ເກັ່ງຫຼາຍ", zh:"很厉害", cat:"生活"}, {lao:"ຊົມເຊີຍ", zh:"表扬/赞扬", cat:"文化"}, {lao:"ຂໍຄວາມຊ່ວຍເຫຼືອ", zh:"请求帮助", cat:"生活"},
+
+    // --- 法律与民生进阶 (工作/文化) ---
+    {lao:"ສິດທິມະນຸດ", zh:"人权", cat:"文化"}, {lao:"ຄວາມສະເໝີພາບ", zh:"平等", cat:"文化"}, {lao:"ອິດສະລະພາບ", zh:"自由", cat:"文化"}, {lao:"ສັນຕິພາບ", zh:"和平", cat:"文化"},
+    {lao:"ອາດຊະຍາກຳ", zh:"犯罪", cat:"工作"}, {lao:"ຢາເສບຕິດ", zh:"毒品", cat:"生活"}, {lao:"ການສໍ້ໂກງ", zh:"诈骗", cat:"工作"}, {lao:"ການຄ້າມະນຸດ", zh:"人口贩卖", cat:"工作"},
+    {lao:"ສິ່ງແວດລ້ອມ", zh:"环境", cat:"文化"}, {lao:"ໂລກຮ້ອນ", zh:"全球变暖", cat:"文化"}, {lao:"ພະລັງງານສະອາດ", zh:"清洁能源", cat:"工作"}, {lao:"ການພັດທະນາແບບຍືນຍົງ", zh:"可持续发展", cat:"工作"},
+    // --- 国际物流与海关 (工作) ---
+    {lao:"ຕູ້ຄອນເທນເນີ", zh:"集装箱", cat:"工作"}, {lao:"ສິນຄ້າຂ້າມແດນ", zh:"跨境货物", cat:"工作"}, {lao:"ຕົວແທນອອກຂອງ", zh:"清关代理", cat:"工作"}, {lao:"ໃບຂົນສົ່ງ", zh:"运单", cat:"工作"},
+    {lao:"ນ້ຳໜັກລວມ", zh:"毛重", cat:"工作"}, {lao:"ນ້ຳໜັກສຸດທິ", zh:"净重", cat:"工作"}, {lao:"ການຫຸ້ມຫໍ່", zh:"包装", cat:"工作"}, {lao:"ສິນຄ້າແຕກງ່າຍ", zh:"易碎品", cat:"工作"},
+    {lao:"ສາງພັກສິນຄ້າ", zh:"保税仓", cat:"工作"}, {lao:"ຄ່າທຳນຽມທາງ", zh:"路费/过路费", cat:"工作"}, {lao:"ການກວດປ່ອຍ", zh:"放行/查验", cat:"工作"}, {lao:"ສິນຄ້າຕ້ອງຫ້າມ", zh:"禁运品", cat:"工作"},
+    {lao:"ການປະກັນໄພສິນຄ້າ", zh:"货运保险", cat:"工作"}, {lao:"ຕົ້ນທາງ", zh:"始发地", cat:"工作"}, {lao:"ປາຍທາງ", zh:"目的地", cat:"工作"}, {lao:"ການຈັດສົ່ງ", zh:"派送", cat:"工作"},
+
+    // --- 电力与信息通讯 (工作) ---
+    {lao:"ໝໍ້ແປງໄຟ", zh:"变压器", cat:"工作"}, {lao:"ແຮງດັນໄຟຟ້າ", zh:"电压", cat:"工作"}, {lao:"ກະແສໄຟຟ້າ", zh:"电流", cat:"工作"}, {lao:"ໄຟຟ້າຊັອດ", zh:"触电", cat:"工作"},
+    {lao:"ການຕິດຕັ້ງເນັດ", zh:"宽带安装", cat:"工作"}, {lao:"ເລົາເຕີ", zh:"路由器", cat:"工作"}, {lao:"ສາຍໃຍແກ້ວ", zh:"光纤", cat:"工作"}, {lao:"ສັນຍານອ່ອນ", zh:"信号弱", cat:"工作"},
+    {lao:"ບັດເຕີມເງິນ", zh:"充值卡", cat:"生活"}, {lao:"ລົງທະບຽນຊິມ", zh:"实名开卡", cat:"生活"}, {lao:"ແອັບພລິເຄຊັນ", zh:"应用程序", cat:"工作"}, {lao:"ລະບົບຄລາວ", zh:"云系统", cat:"工作"},
+    {lao:"ຄວາມປອດໄພໄຊເບີ", zh:"网络安全", cat:"工作"}, {lao:"ຖານຂໍ້ມູນ", zh:"数据库", cat:"工作"}, {lao:"ການສ້ອມແປງດ່ວນ", zh:"紧急报修", cat:"工作"}, {lao:"ໄຟສຳຮອງ", zh:"备用电源", cat:"工作"},
+
+    // --- 农业与农贸 (文化/生活) ---
+    {lao:"ຢາງພາລາ", zh:"橡胶", cat:"文化"}, {lao:"ມັນຕົ້ນ", zh:"木薯", cat:"文化"}, {lao:"ອ້ອຍ", zh:"甘蔗", cat:"文化"}, {lao:"ສາລີ", zh:"玉米", cat:"生活"},
+    {lao:"ໝາກຖົ່ວເຫຼືອງ", zh:"大豆", cat:"生活"}, {lao:"ກາເຟອາຣາບີກ້າ", zh:"阿拉比卡咖啡", cat:"文化"}, {lao:"ຝຸ່ນຊີວະພາບ", zh:"有机肥", cat:"工作"}, {lao:"ຢາຂ້າແມງໄມ້", zh:"农药", cat:"工作"},
+    {lao:"ຊົນລະປະທານ", zh:"水利灌溉", cat:"工作"}, {lao:"ລົດໄຖນາ", zh:"拖拉机", cat:"工作"}, {lao:"ລະດູເກັບກ່ຽວ", zh:"收获季节", cat:"文化"}, {lao:"ໂຮງສີເຂົ້າ", zh:"碾米厂", cat:"工作"},
+    {lao:"ລ້ຽງງົວ", zh:"养牛", cat:"文化"}, {lao:"ຟາມໄກ່", zh:"鸡场", cat:"工作"}, {lao:"ການປະມົງ", zh:"渔业", cat:"文化"}, {lao:"ພັນພືດ", zh:"种子", cat:"工作"},
+
+    // --- 身体精细部位与生理 (生活) ---
+    {lao:"ໜັງຕາ", zh:"眼皮", cat:"生活"}, {lao:"ຂົນຕາ", zh:"睫毛", cat:"生活"}, {lao:"ແກ້ມ", zh:"脸颊", cat:"生活"}, {lao:"ຄາງ", zh:"下巴", cat:"生活"},
+    {lao:"ເຫງືອກ", zh:"牙龈", cat:"生活"}, {lao:"ລີ້ນ", zh:"舌头", cat:"生活"}, {lao:"ເພດານປາກ", zh:"上颚", cat:"生活"}, {lao:"ຂໍ້ມື", zh:"手腕", cat:"生活"},
+    {lao:"ສອກ", zh:"肘部", cat:"生活"}, {lao:"ຫົວເຂົ່າ", zh:"膝盖", cat:"生活"}, {lao:"ຂໍ້ຕີນ", zh:"脚踝", cat:"生活"}, {lao:"ສັ້ນນ່ອງ", zh:"小腿", cat:"生活"},
+    {lao:"ເສັ້ນປະສາດ", zh:"神经", cat:"生活"}, {lao:"ກ້າມຊີ້ນ", zh:"肌肉", cat:"生活"}, {lao:"ກະເພາະອາຫານ", zh:"胃部", cat:"生活"}, {lao:"ລຳໄສ້", zh:"肠道", cat:"生活"},
+
+    // --- 抽象形容词与状态进阶 (生活/文化) ---
+    {lao:"ໂຊກຮ້າຍ", zh:"倒霉/运气不好", cat:"生活"}, {lao:"ໜ້າອັບອາຍ", zh:"丢脸/尴尬", cat:"生活"}, {lao:"ພູມໃຈ", zh:"自豪", cat:"文化"}, {lao:"ທໍ້ຖອຍ", zh:"气馁/沮丧", cat:"生活"},
+    {lao:"ກະຕືລືລົ້ນ", zh:"热衷/积极", cat:"工作"}, {lao:"ຈິງໃຈ", zh:"诚恳", cat:"文化"}, {lao:"ເຫັນແກ່ຕົວ", zh:"自私", cat:"生活"}, {lao:"ໃຈກວ້າງ", zh:"大方", cat:"文化"},
+    {lao:"ຮອບຄອບ", zh:"周到/谨慎", cat:"工作"}, {lao:"ປະມາດ", zh:"粗心/大意", cat:"工作"}, {lao:"ອິດສາ", zh:"嫉妒", cat:"生活"}, {lao:"ເມດຕາ", zh:"慈悲/怜悯", cat:"文化"},
+    {lao:"ທ່ຽງທຳ", zh:"公正", cat:"文化"}, {lao:"ອ່ອນນ້ອມ", zh:"谦逊", cat:"文化"}, {lao:"ແຂງກະດ້າງ", zh:"生硬/固执", cat:"生活"}, {lao:"ຊື່ສັດ", zh:"忠诚", cat:"文化"},
+    // --- 维修工具与材料细节 (工作/生活) ---
+    {lao:"ສະກັອດ", zh:"胶带", cat:"生活"}, {lao:"ກາວຕາຊ້າງ", zh:" 502胶水", cat:"生活"}, {lao:"ເຈ້ຍຊາຍ", zh:"砂纸", cat:"工作"}, {lao:"ສີສະເປ", zh:"自喷漆", cat:"工作"},
+    {lao:"ແປງຖູ", zh:"刷子", cat:"生活"}, {lao:"ຄ້ອນຕີເຫຼັກ", zh:"铁锤", cat:"工作"}, {lao:"ຄີມຕັດ", zh:"剪切钳", cat:"工作"}, {lao:"ໄຂຄວງ", zh:"螺丝刀", cat:"工作"},
+    {lao:"ແມັດກ່າຍ", zh:"卷尺", cat:"工作"}, {lao:"ລະດັບນ້ຳ", zh:"水平尺", cat:"工作"}, {lao:"ລວດເຊື່ອມ", zh:"焊条", cat:"工作"}, {lao:"ໜ້າກາກເຊື່ອມ", zh:"电焊面罩", cat:"工作"},
+    {lao:"ຕູ້ເຊື່ອມ", zh:"电焊机", cat:"工作"}, {lao:"ໃບບົດ", zh:"切割片", cat:"工作"}, {lao:"ເຫຼັກເສັ້ນ", zh:"螺纹钢", cat:"工作"}, {lao:"ໄມ້ອັດ", zh:"多层板/胶合板", cat:"工作"},
+
+    // --- 高级餐饮与食材 (生活/文化) ---
+    {lao:"ເຜັດໜ້ອຍໜຶ່ງ", zh:"微辣", cat:"生活"}, {lao:"ບໍ່ໃສ່ຜັກບົ່ວ", zh:"不放葱", cat:"生活"}, {lao:"ບໍ່ໃສ່ແປ້ງນົວ", zh:"不放味精", cat:"生活"}, {lao:"ນ້ຳຕົ້ມສຸກ", zh:"凉白开", cat:"生活"},
+    {lao:"ເບຍສົດ", zh:"生啤", cat:"生活"}, {lao:"ເຫຼົ້າຂາວ", zh:"白酒", cat:"生活"}, {lao:"ເຂົ້າໜຽວໃໝ່", zh:"新糯米", cat:"文化"}, {lao:"ແກງໜໍ່ໄມ້", zh:"笋汤", cat:"生活"},
+    {lao:"ປິ້ງປາ", zh:"烤鱼", cat:"生活"}, {lao:"ໝົກໄກ່", zh:"芭蕉叶蒸鸡", cat:"生活"}, {lao:"ແຜ່ນແພ", zh:"餐巾", cat:"生活"}, {lao:"ໄມ້ຖູ່", zh:"筷子", cat:"生活"},
+    {lao:"ນ້ຳຈິ້ມ", zh:"蘸料", cat:"生活"}, {lao:"ຜັກກັບ", zh:"配菜/生菜", cat:"生活"}, {lao:"ອາຫານທະເລ", zh:"海鲜", cat:"生活"}, {lao:"ກຸ້ງ", zh:"虾", cat:"生活"},
+
+    // --- 酒店与接待服务 (工作/生活) ---
+    {lao:"ເຊັກອິນ", zh:"办理入住", cat:"生活"}, {lao:"ເຊັກເອົ້າ", zh:"退房", cat:"生活"}, {lao:"ຜ້າປູຕຽງ", zh:"床单", cat:"生活"}, {lao:"ປອກໝອນ", zh:"枕套", cat:"生活"},
+    {lao:"ຜ້າເຊັດຕົວ", zh:"大浴巾", cat:"生活"}, {lao:"ສະບູແຫຼວ", zh:"沐浴露", cat:"生活"}, {lao:"ຢາສະຜົມ", zh:"洗发水", cat:"生活"}, {lao:"ແປງສີແຂ້ວ", zh:"牙刷", cat:"生活"},
+    {lao:"ຕູ້ເຊັບ", zh:"保险箱", cat:"生活"}, {lao:"ໂທລະສັບພາຍໃນ", zh:"内线电话", cat:"生活"}, {lao:"ບໍລິການຊັກລີດ", zh:"洗衣服务", cat:"生活"}, {lao:"ບຸບເຟ້", zh:"自助餐", cat:"生活"},
+    {lao:"ຫ້ອງ VIP", zh:"贵宾间", cat:"工作"}, {lao:"ຫ້ອງປະຊຸມໃຫຍ່", zh:"大礼堂/大型会议室", cat:"工作"}, {lao:"ພະນັກງານຕ້ອນຮັບ", zh:"前台接线员", cat:"工作"}, {lao:"ບັດເຂົ້າຫ້ອງ", zh:"房卡", cat:"生活"},
+
+    // --- 社交礼仪与口语 (文化/生活) ---
+    {lao:"ຍິນດີຕ້ອນຮັບ", zh:"欢迎光临", cat:"文化"}, {lao:"ພົບກັນໃໝ່", zh:"再会", cat:"生活"}, {lao:"ຂໍອະນຸຍາດ", zh:"请准许/打扰一下", cat:"生活"}, {lao:"ເປັນກັນເອງ", zh:"随和/亲切", cat:"文化"},
+    {lao:"ຂອບໃຈຫຼາຍໆ", zh:"多谢/十分感谢", cat:"生活"}, {lao:"ບໍ່ເປັນຫຍັງ", zh:"别客气/没事", cat:"生活"}, {lao:"ຕາມສະບາຍ", zh:"请随意", cat:"文化"}, {lao:"ເຊີນນັ່ງ", zh:"请坐", cat:"文化"},
+    {lao:"ກາລຸນາ", zh:"请(委婉)", cat:"生活"}, {lao:"ຊ່ວຍແນະນຳແດ່", zh:"请多指教/给点建议", cat:"工作"}, {lao:"ຜິດພາດ", zh:"失误/弄错", cat:"生活"}, {lao:"ຂໍອະໄພ", zh:"原谅/抱歉", cat:"文化"},
+
+    // --- 逻辑、连接与副词 (文化/工作) ---
+    {lao:"ແນ່ນອນ", zh:"当然/肯定", cat:"文化"}, {lao:"ອາດຈະ", zh:"也许/可能", cat:"文化"}, {lao:"ບາງທີ", zh:"或许", cat:"文化"}, {lao:"ທັນທີ", zh:"立刻", cat:"工作"},
+    {lao:"ຄ່ອຍໆ", zh:"慢慢地", cat:"生活"}, {lao:"ປົກກະຕິ", zh:"正常/通常", cat:"生活"}, {lao:"ພິເສດ", zh:"特殊", cat:"生活"}, {lao:"ສ່ວນຫຼາຍ", zh:"大部分", cat:"文化"},
+    {lao:"ສ່ວນໜ້ອຍ", zh:"少部分", cat:"文化"}, {lao:"ເກືອບ", zh:"几乎", cat:"生活"}, {lao:"ເປັນປະຈຳ", cat:"经常", zh:"经常"}, {lao:"ບາງຄັ້ງ", zh:"有时", cat:"生活"},
+     // --- 1. 大坝与水工建筑 (工作) ---
+    {lao:"ເຂື່ອນ", zh:"大坝", cat:"工作"}, {lao:"ອ່າງເກັບນ້ຳ", zh:"水库", cat:"工作"}, {lao:"ປະຕູນ້ຳ", zh:"闸门", cat:"工作"}, {lao:"ທາງລະບາຍນ້ຳລົ້ນ", zh:"溢洪道", cat:"工作"},
+    {lao:"ອຸໂມງຜັນນ້ຳ", zh:"导流洞", cat:"工作"}, {lao:"ອຸໂມງສົ່ງນ້ຳ", zh:"引水隧道", cat:"工作"}, {lao:"ເຮືອນຈັກ", zh:"厂房", cat:"工作"}, {lao:"ພື້ນຖານເຂື່ອນ", zh:"坝基", cat:"工作"},
+    {lao:"ການຖົມດິນຫີນ", zh:"土石方填筑", cat:"工作"}, {lao:"ເຫຼັກເສັ້ນ", zh:"钢筋", cat:"工作"}, {lao:"ການເທເບຕົງ", zh:"混凝土浇筑", cat:"工作"}, {lao:"ແບບຫຼໍ່", zh:"模板", cat:"工作"},
+    {lao:"ນ້ຳຊຶມ", zh:"渗漏/渗水", cat:"工作"}, {lao:"ລະດັບນ້ຳ", zh:"水位", cat:"工作"}, {lao:"ກຳແພງກັນດິນ", zh:"挡土墙", cat:"工作"}, {lao:"ການເຈາະສຳຫຼວດ", zh:"钻探勘测", cat:"工作"},
+
+    // --- 2. 机电设备与发电机组 (工作) ---
+    {lao:"ເຄື່ອງກຳເນີດໄຟຟ້າ", zh:"发电机", cat:"工作"}, {lao:"ກົງຫັນນ້ຳ", zh:"水轮机", cat:"工作"}, {lao:"ເພົາ", zh:"轴/主轴", cat:"工作"}, {lao:"ໃບພັດ", zh:"叶片", cat:"工作"},
+    {lao:"ລະບົບຄວບຄຸມ", zh:"控制系统", cat:"工作"}, {lao:"ຕູ້ເບຣກເກີ", zh:"开关柜", cat:"工作"}, {lao:"ໝໍ້ແປງໄຟຟ້າ", zh:"变压器", cat:"工作"}, {lao:"ລະບົບລະບາຍຄວາມຮ້ອນ", zh:"冷却系统", cat:"工作"},
+    {lao:"ນ້ຳມັນໄຮໂດຼລິກ", zh:"液压油", cat:"工作"}, {lao:"ເຊັນເຊີ", zh:"传感器", cat:"工作"}, {lao:"ການທົດລອງເດີນເຄື່ອງ", zh:"调试运行", cat:"工作"}, {lao:"ການຕິດຕັ້ງ", zh:"安装", cat:"工作"},
+    {lao:"ເຄື່ອງຍົກ/ເຄນ", zh:"行车/吊车", cat:"工作"}, {lao:"ສາຍກາວ", zh:"地线", cat:"工作"}, {lao:"ແຜງຜັງໄຟຟ້າ", zh:"电路图", cat:"工作"}, {lao:"ການວັດແທກ", zh:"测量/仪表", cat:"工作"},
+
+    // --- 3. 输变电与电网工程 (工作) ---
+    {lao:"ສາຍສົ່ງໄຟຟ້າ", zh:"输电线路", cat:"工作"}, {lao:"ເສົາໄຟຟ້າແຮງສູງ", zh:"高压铁塔", cat:"工作"}, {lao:"ສະຖານີໄຟຟ້າຍ່ອຍ", zh:"变电站", cat:"工作"}, {lao:"ແຮງດັນໄຟຟ້າ", zh:"电压", cat:"工作"},
+    {lao:"ໄຟຟ້າສາມເຟດ", zh:"三相电", cat:"工作"}, {lao:"ຕົວນຳໄຟຟ້າ", zh:"导体", cat:"工作"}, {lao:"ສາຍເຄເບີນ", zh:"电缆", cat:"工作"}, {lao:"ສນວນໄຟຟ້າ", zh:"绝缘体", cat:"工作"},
+    {lao:"ໄຟຟ້າລັດວົງຈອນ", zh:"短路", cat:"工作"}, {lao:"ໄຟຟ້າເກີນ", zh:"过载", cat:"工作"}, {lao:"ເຄື່ອງຕັດໄຟ", zh:"断路器", cat:"工作"}, {lao:"ການເຊື່ອມຕໍ່ຕາຄ່າຍ", zh:"并网", cat:"工作"},
+
+    // --- 4. 现场施工管理与安质环 (工作) ---
+    {lao:"ຄວາມປອດໄພ", zh:"安全", cat:"工作"}, {lao:"ອຸປະຕິເຫດ", zh:"事故", cat:"工作"}, {lao:"ເຂດອັນຕະລາຍ", zh:"危险区域", cat:"工作"}, {lao:"ເສື້ອສະທ້ອນແສງ", zh:"反光背心", cat:"工作"},
+    {lao:"ໝວກນິລະໄພ", zh:"安全帽", cat:"工作"}, {lao:"ເຂັມຂັດນິລະໄພ", zh:"安全带", cat:"工作"}, {lao:"ການປະຖົມພະຍາບານ", zh:"急救", cat:"工作"}, {lao:"ຜູ້ນິລະໄພ", zh:"安全员", cat:"工作"},
+    {lao:"ການກວດກາ", zh:"检查/验收", cat:"工作"}, {lao:"ມາດຕະຖານ", zh:"标准/规范", cat:"工作"}, {lao:"ບົດບັນທຶກ", zh:"会议纪要/记录", cat:"工作"}, {lao:"ແຜນວຽກ", zh:"施工计划", cat:"工作"},
+    {lao:"ຄວາມຄືບໜ້າ", zh:"进度", cat:"工作"}, {lao:"ຄຸນນະພາບ", zh:"质量", cat:"工作"}, {lao:"ການລາຍງານ", zh:"汇报/报告", cat:"工作"}, {lao:"ສະຖານທີ່ກໍ່ສ້າງ", zh:"工地/现场", cat:"工作"},
+
+    // --- 5. 建筑机械与材料 (工作) ---
+    {lao:"ລົດຂຸດ", zh:"挖掘机", cat:"工作"}, {lao:"ລົດດັນ", zh:"推土机", cat:"工作"}, {lao:"ລົດບົດ", zh:"压路机", cat:"工作"}, {lao:"ລົດເຄນ", zh:"吊车", cat:"工作"},
+    {lao:"ລົດໂມ້ຊີມັງ", zh:"搅拌车", cat:"工作"}, {lao:"ປ້ຳເບຕົງ", zh:"地泵/混凝土泵", cat:"工作"}, {lao:"ນັ່ງຮ້ານ", zh:"脚手架", cat:"工作"}, {lao:"ເຫຼັກຊີ", zh:"槽钢/型钢", cat:"工作"},
+    {lao:"ສັງກະສີ", zh:"彩钢瓦/锌板", cat:"工作"}, {lao:"ທໍ່ເຫຼັກ", zh:"钢管", cat:"工作"}, {lao:"ຫີນແຮ່", zh:"碎石", cat:"工作"}, {lao:"ຊາຍຫຍາບ", zh:"粗沙", cat:"工作"},
+    {lao:"ນ້ຳຢາກັນຊຶມ", zh:"防水剂", cat:"工作"}, {lao:"ເຄື່ອງອັດລົມ", zh:"空压机", cat:"工作"}, {lao:"ໄຟສະປອດໄລ້", zh:"投光灯", cat:"工作"}, {lao:"ສາຍຢາງ", zh:"软管/胶管", cat:"工作"}
+].map(item => ({ ...item, py: pinyinPro.pinyin(item.zh) })); // 自动生成拼音
+
+// ==========================================
+// 2. 状态管理
+// ==========================================
+// 为了防止与旧版本冲突，这里采用 _v11 后缀
+let db = JSON.parse(localStorage.getItem('lao_db_v11')) || initialDB;
+let wrongs = JSON.parse(localStorage.getItem('lao_wrong_v11')) || [];
+let memory = JSON.parse(localStorage.getItem('lao_memory_v11')) || { "全部":0, "生活":0, "工作":0, "文化":0, "错题":0 };
+
+let currentCat = '全部';
+let currentList = [];
+let currentIndex = 0;
+
+// ==========================================
+// 3. 页面与路由
+// ==========================================
+function navTo(pageId, tabElement) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById('page-' + pageId).classList.add('active');
+    if(tabElement) tabElement.classList.add('active');
+
+    if(pageId === 'study') refreshStudy();
+    if(pageId === 'admin') updateAdminStats();
+    if(pageId === 'dict') renderDict();
+}
+
+// ==========================================
+// 4. 词典功能
+// ==========================================
+function renderDict() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const result = db.filter(w => w.lao.toLowerCase().includes(query) || w.zh.includes(query) || w.py.includes(query));
+    
+    const html = result.map(w => `
+        <div class="dict-item">
+            <div>
+                <div style="font-size:20px; font-weight:bold; color:var(--primary); margin-bottom:4px;">${w.lao}</div>
+                <div><ruby style="font-size:16px">${w.zh}<rt>${w.py}</rt></ruby></div>
+            </div>
+            <div style="font-size:12px; color:var(--text-sub); background:#f2f2f7; padding:4px 8px; border-radius:8px;">${w.cat}</div>
+        </div>
+    `).join('');
+    
+    document.getElementById('dictContent').innerHTML = html || '<div style="text-align:center; padding:30px; color:#999;">未找到相关词汇</div>';
+}
+
+// ==========================================
+// 5. 背诵与记忆核心功能
+// ==========================================
+function setCat(cat, btnElement) {
+    currentCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+    refreshStudy();
+}
+
+function refreshStudy() {
+    // 根据分类筛选数据
+    if (currentCat === '错题') {
+        currentList = [...wrongs];
+    } else if (currentCat === '全部') {
+        currentList = [...db];
+    } else {
+        currentList = db.filter(item => item.cat === currentCat);
+    }
+
+    // 读取该分类的历史记忆进度
+    currentIndex = memory[currentCat] || 0;
+    if (currentIndex >= currentList.length) currentIndex = 0;
+    
+    updateCardUI();
+}
+
+function updateCardUI() {
+    const card = document.getElementById('mainCard');
+    card.classList.remove('flipped'); // 切换单词时重置翻转状态
+    
+    // 空列表处理
+    if (currentList.length === 0) {
+        document.getElementById('cardLaoFront').innerText = "太棒了";
+        document.getElementById('cardLaoBack').innerText = "空空如也";
+        document.getElementById('cardZhPy').innerHTML = "该分类下没有词汇<rt>请添加或切换分类</rt>";
+        document.getElementById('cardCatTag').style.display = 'none';
+        document.getElementById('progressText').innerText = "0/0";
+        document.getElementById('progressBar').style.width = "0%";
+        return;
+    }
+
+    // 渲染卡片数据
+    const word = currentList[currentIndex];
+    
+    // 正面
+    document.getElementById('cardLaoFront').innerText = word.lao;
+    
+    // 背面 (双面显示：原词 + 翻译)
+    document.getElementById('cardLaoBack').innerText = word.lao;
+    document.getElementById('cardZhPy').innerHTML = `${word.zh}<rt>${word.py}</rt>`;
+    document.getElementById('cardCatTag').innerText = word.cat;
+    document.getElementById('cardCatTag').style.display = 'block';
+
+    // 进度条
+    const currentNum = currentIndex + 1;
+    const totalNum = currentList.length;
+    document.getElementById('progressText').innerText = `${currentNum}/${totalNum}`;
+    document.getElementById('progressBar').style.width = `${(currentNum / totalNum) * 100}%`;
+
+    // 自动保存记忆
+    memory[currentCat] = currentIndex;
+    localStorage.setItem('lao_memory_v11', JSON.stringify(memory));
+}
+
+function handleResult(isRemembered) {
+    if (currentList.length === 0) return;
+    const word = currentList[currentIndex];
+    
+    if (!isRemembered) {
+        // 记入错题本 (去重)
+        if (!wrongs.some(w => w.lao === word.lao)) {
+            wrongs.push(word);
+            saveData();
+        }
+    } else {
+        // 如果在错题本里点击了“记住了”，则从错题本移除
+        if (currentCat === '错题') {
+            wrongs = wrongs.filter(w => w.lao !== word.lao);
+            saveData();
+            if (currentIndex >= wrongs.length) currentIndex = 0;
+            return refreshStudy(); // 刷新列表
+        }
+    }
+    navStep(1); // 自动进入下一个
+}
+
+function navStep(step) {
+    if (currentList.length === 0) return;
+    currentIndex = (currentIndex + step + currentList.length) % currentList.length;
+    updateCardUI();
+}
+
+// ==========================================
+// 6. 管理、备份与恢复
+// ==========================================
+function updateAdminStats() {
+    document.getElementById('stat-total').innerText = db.length;
+    document.getElementById('stat-wrong').innerText = wrongs.length;
+}
+
+function addNewWord() {
+    const lao = document.getElementById('addLao').value.trim();
+    const zh = document.getElementById('addZh').value.trim();
+    const cat = document.getElementById('addCat').value;
+    
+    if (!lao || !zh) {
+        alert("请填写完整的老挝语和中文！");
+        return;
+    }
+
+    const py = pinyinPro.pinyin(zh);
+    db.unshift({ lao, zh, py, cat }); // 加到词库最前面
+    saveData();
+    
+    alert("✅ 成功加入词库！");
+    document.getElementById('addLao').value = "";
+    document.getElementById('addZh').value = "";
+    updateAdminStats();
+}
+
+function saveData() {
+    localStorage.setItem('lao_db_v11', JSON.stringify(db));
+    localStorage.setItem('lao_wrong_v11', JSON.stringify(wrongs));
+}
+
+// 导出备份 (生成JSON文件)
+function exportData() {
+    // 将 db 和 wrongs 打包导出
+    const exportObj = { db: db, wrongs: wrongs };
+    const dataStr = JSON.stringify(exportObj);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LaoLearn_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 导入恢复 (读取JSON文件)
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (imported.db && Array.isArray(imported.db)) {
+                if (confirm("备份读取成功！是否覆盖当前所有数据？")) {
+                    db = imported.db;
+                    wrongs = imported.wrongs || [];
+                    saveData();
+                    alert("恢复成功！页面将重新加载。");
+                    location.reload();
+                }
+            } else {
+                alert("文件格式不正确，请选择LaoLearn导出的JSON文件。");
+            }
+        } catch (err) {
+            alert("读取失败：文件已损坏或格式错误。");
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // 清空选择，允许重复导入同一个文件
+}
+
+function resetData() {
+    if(confirm("⚠️ 危险操作！这会清空你手动添加的所有单词和错题本，恢复到最初的100词状态，确定要继续吗？")) {
+        localStorage.removeItem('lao_db_v11');
+        localStorage.removeItem('lao_wrong_v11');
+        localStorage.removeItem('lao_memory_v11');
+        location.reload();
+    }
+}
+
+// ==========================================
+// 初始化启动
+// ==========================================
+window.onload = () => {
+    renderDict();
+    updateAdminStats();
+};
+</script>
+</body>
+</html>
